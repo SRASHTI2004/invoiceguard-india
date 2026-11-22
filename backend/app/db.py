@@ -5,18 +5,22 @@ from . import config
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS suppliers (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    name          TEXT NOT NULL UNIQUE,
-    approved      INTEGER NOT NULL DEFAULT 1,
-    payment_email TEXT NOT NULL,
-    notes         TEXT
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    name           TEXT NOT NULL UNIQUE,
+    approved       INTEGER NOT NULL DEFAULT 1,
+    gstin          TEXT NOT NULL,        -- saved GSTIN: an invoice with a different one is blocked
+    bank_account   TEXT,                 -- saved payout destination (payouts NEVER use details printed on an invoice)
+    ifsc           TEXT,
+    upi_id         TEXT,
+    payout_method  TEXT NOT NULL DEFAULT 'UPI',   -- UPI or BANK
+    notes          TEXT                  -- address
 );
 
 CREATE TABLE IF NOT EXISTS purchase_orders (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     po_number    TEXT NOT NULL UNIQUE,
     supplier_id  INTEGER NOT NULL REFERENCES suppliers(id),
-    amount_cents INTEGER NOT NULL,
+    amount_paise INTEGER NOT NULL,       -- PO value including GST
     description  TEXT
 );
 
@@ -26,20 +30,32 @@ CREATE TABLE IF NOT EXISTS invoices (
     file_hash         TEXT,
     supplier_id       INTEGER REFERENCES suppliers(id),
     supplier_name     TEXT,
+    supplier_gstin    TEXT,
+    buyer_gstin       TEXT,
+    place_of_supply   TEXT,
     invoice_number    TEXT,
     invoice_date      TEXT,
     due_date          TEXT,
-    po_number        TEXT,
-    total_cents       INTEGER,
-    payee_email       TEXT,
+    po_number         TEXT,
+    taxable_paise     INTEGER,
+    cgst_paise        INTEGER,
+    sgst_paise        INTEGER,
+    igst_paise        INTEGER,
+    total_paise       INTEGER,
+    payee_upi         TEXT,              -- payment details PRINTED on the invoice (compared with the saved ones)
+    payee_account     TEXT,
+    payee_ifsc        TEXT,
     line_items        TEXT,              -- JSON
+    gst_report        TEXT,              -- JSON: every GST check with pass/fail, shown per invoice in the dashboard
     status            TEXT NOT NULL DEFAULT 'RECEIVED',  -- RECEIVED/PAID/HELD/BLOCKED/REJECTED
     decision          TEXT,              -- AUTO_PAY / HOLD / BLOCK
     reason            TEXT,
     risk_score        REAL,
-    payout_ref        TEXT,              -- our idempotency key sent to PayPal as sender_batch_id
-    payout_batch_id   TEXT,
+    payout_ref        TEXT,              -- our idempotency key for the payout
+    payout_batch_id   TEXT,              -- payout id returned by the payout provider
     payout_status     TEXT,              -- PENDING / SUCCESS / FAILED
+    payout_method     TEXT,              -- UPI / IMPS / RTGS
+    payout_destination TEXT,             -- masked, e.g. ra***@okhdfc or XXXXXX1234
     paid_at           TEXT,              -- when the payout was sent (for the daily limit)
     created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -60,6 +76,17 @@ CREATE TABLE IF NOT EXISTS gemini_cache (
     result_json TEXT NOT NULL,
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (file_hash, kind)
+);
+
+CREATE TABLE IF NOT EXISTS payouts (       -- the simulated sandbox's ledger; `ref` makes a payout idempotent
+    ref          TEXT PRIMARY KEY,
+    payout_id    TEXT NOT NULL,
+    amount_paise INTEGER NOT NULL,
+    method       TEXT NOT NULL,
+    destination  TEXT NOT NULL,            -- masked
+    status       TEXT NOT NULL,
+    utr          TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 """
 

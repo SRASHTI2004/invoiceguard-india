@@ -39,8 +39,8 @@ def _short(v, n=200):
 def _invoice_view(inv: dict) -> dict:
     return {"id": inv["id"], "supplier": _short(inv["supplier_name"], 60),
             "invoice_number": _short(inv["invoice_number"], 40),
-            "amount": checks.money(inv["total_cents"]) if inv["total_cents"] is not None else None,
-            "amount_cents": inv["total_cents"], "due_date": inv["due_date"], "status": inv["status"],
+            "amount": checks.money(inv["total_paise"]) if inv["total_paise"] is not None else None,
+            "amount_paise": inv["total_paise"], "due_date": inv["due_date"], "status": inv["status"],
             "decision": inv["decision"], "reason": _short(inv["reason"])}
 
 
@@ -86,7 +86,7 @@ def build_proposal(steps: list[dict]) -> dict:
     recommended = [i for i in items if i["recommended"]]
     return {"recommended": recommended,
             "not_recommended": [i for i in items if not i["recommended"]],
-            "total_recommended_cents": sum((i["invoice"] or {}).get("amount_cents") or 0 for i in recommended)}
+            "total_recommended_paise": sum((i["invoice"] or {}).get("amount_paise") or 0 for i in recommended)}
 
 
 def run_agent(conn, message: str, today: str | None = None, client=None, max_steps: int = 8) -> dict:

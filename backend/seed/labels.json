@@ -1,88 +1,96 @@
 [
   {
-    "file": "inv01_northwind.pdf",
-    "supplier": "Northwind Office Supplies",
-    "number": "INV-2026-1041",
+    "file": "inv01_mahalaxmi.pdf",
+    "supplier": "Mahalaxmi Office Supplies",
+    "number": "MOS/26-27/1041",
     "is_fraud": false,
     "expected": "AUTO_PAY",
-    "category": "normal"
+    "category": "valid_igst"
   },
   {
     "file": "inv02_brightline.pdf",
-    "supplier": "Brightline Packaging Co.",
-    "number": "BP-88213",
+    "supplier": "Brightline Packaging Pvt Ltd",
+    "number": "BP/26-27/8821",
     "is_fraud": false,
     "expected": "AUTO_PAY",
-    "category": "normal"
+    "category": "valid_cgst_sgst"
   },
   {
-    "file": "inv03_harbor.pdf",
-    "supplier": "Harbor Freight Logistics",
-    "number": "HFL-5521",
+    "file": "inv03_konkan.pdf",
+    "supplier": "Konkan Freight Logistics",
+    "number": "KFL/2610/5521",
     "is_fraud": false,
     "expected": "AUTO_PAY",
-    "category": "normal"
+    "category": "valid_igst"
   },
   {
     "file": "inv04_summit.pdf",
-    "supplier": "Summit IT Services",
-    "number": "SIT-0342",
+    "supplier": "Summit IT Services Pvt Ltd",
+    "number": "SIT/0342",
     "is_fraud": false,
     "expected": "AUTO_PAY",
-    "category": "normal"
+    "category": "valid_igst"
   },
   {
     "file": "inv05_greenleaf.pdf",
-    "supplier": "GreenLeaf Cleaning Services",
-    "number": "GL-7710",
+    "supplier": "GreenLeaf Facility Services",
+    "number": "GL/7710",
     "is_fraud": false,
     "expected": "AUTO_PAY",
-    "category": "normal"
+    "category": "valid_cgst_sgst"
   },
   {
-    "file": "inv06_northwind_duplicate.pdf",
-    "supplier": "Northwind Office Supplies",
-    "number": "INV-2026-1041",
+    "file": "inv06_mahalaxmi_duplicate.pdf",
+    "supplier": "Mahalaxmi Office Supplies",
+    "number": "MOS/26-27/1041",
     "is_fraud": true,
     "expected": "BLOCK",
     "category": "duplicate"
   },
   {
-    "file": "inv07_atlas_inflated.pdf",
+    "file": "inv07_atlas_fake_gstin.pdf",
     "supplier": "Atlas Industrial Parts",
-    "number": "AIP-30918",
+    "number": "AIP/30918",
     "is_fraud": true,
     "expected": "BLOCK",
-    "category": "inflated_amount"
+    "category": "fake_gstin"
   },
   {
-    "file": "inv08_pinnacle_email_changed.pdf",
+    "file": "inv08_pinnacle_wrong_tax_type.pdf",
     "supplier": "Pinnacle Print & Design",
-    "number": "PP-2217",
+    "number": "PP/2217",
     "is_fraud": true,
-    "expected": "BLOCK",
-    "category": "changed_payee_email"
+    "expected": "HOLD_OR_BLOCK",
+    "category": "wrong_tax_type"
   },
   {
     "file": "inv09_blueriver_injection.pdf",
     "supplier": "BlueRiver Software Licensing",
-    "number": "BRS-4410",
+    "number": "BRS/4410",
     "is_fraud": true,
     "expected": "BLOCK",
     "category": "prompt_injection"
   },
   {
-    "file": "inv10_orchard_urgent.pdf",
-    "supplier": "Orchard Catering Ltd",
-    "number": "OC-9021",
+    "file": "inv10_orchard_wrong_gst_total.pdf",
+    "supplier": "Orchard Catering Services",
+    "number": "OCS/9021",
     "is_fraud": true,
     "expected": "HOLD_OR_BLOCK",
-    "category": "social_engineering"
+    "category": "wrong_gst_total"
   },
   {
-    "file": "inv11_shadowline_unapproved.pdf",
+    "file": "inv11_lumen_changed_payee.pdf",
+    "supplier": "Lumen Electrical Contractors",
+    "number": "LEC/118",
+    "is_fraud": true,
+    "expected": "BLOCK",
+    "category": "changed_payee"
+  },
+  {
+    "file": "inv12_shadowline_unapproved.pdf",
     "supplier": "Shadowline Trading",
-    "number": "ST-001",
+    "number": "ST/001",
     "is_fraud": true,
     "expected": "BLOCK",
     "category": "unapproved_supplier"

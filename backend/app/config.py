@@ -18,33 +18,33 @@ GEMINI_API_KEY = _secret("GEMINI_API_KEY")
 # Comma-separated list: tried in order. The free tier allows only ~20 requests/day per model,
 # so later models act as fallbacks when one is out of quota or overloaded.
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.8-flash")
-PAYPAL_CLIENT_ID = _secret("PAYPAL_CLIENT_ID")
-PAYPAL_CLIENT_SECRET = _secret("PAYPAL_CLIENT_SECRET")
-# "sandbox" = real PayPal sandbox payouts; "simulate" = no PayPal call (for repeated testing without spending sandbox funds)
-PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").lower()
-PAYPAL_BASE_URL = os.getenv("PAYPAL_BASE_URL", "https://api-m.sandbox.paypal.com").strip().rstrip("/")
+# Payouts go through app/payouts.py. "simulated" is a clearly labelled sandbox: no real money moves.
+PAYOUT_PROVIDER = os.getenv("PAYOUT_PROVIDER", "simulated").lower()
+# Simulated sandbox wallet balance in paise (default Rs 2 crore). Payouts beyond it fail with INSUFFICIENT_FUNDS.
+SANDBOX_BALANCE_PAISE = int(os.getenv("SANDBOX_BALANCE_PAISE", "2000000000"))
 
-# The public demo sends real sandbox payouts: the reset/load-samples endpoint may run at most once per cooldown.
-DEMO_COOLDOWN_SECONDS = int(os.getenv("DEMO_COOLDOWN_SECONDS", "600"))  # 10 minutes
+# The demo reset endpoint can be rate-limited (seconds between runs). 0 = unlimited, fine for the simulated sandbox.
+DEMO_COOLDOWN_SECONDS = int(os.getenv("DEMO_COOLDOWN_SECONDS", "0"))
+
+# Our company (the buyer). Invoices must be billed to this GSTIN or they are held (we could not claim input tax credit).
+BUYER_NAME = os.getenv("BUYER_NAME", "Bluebird Retail Pvt Ltd")
+BUYER_GSTIN = os.getenv("BUYER_GSTIN", "29AABCB5521M1ZJ").strip().upper()
 
 DB_PATH = os.getenv("DB_PATH", str(ROOT / "backend" / "invoiceguard.db"))
 
-# Limits are in cents to avoid float rounding problems.
-CURRENCY = "USD"
-PER_PAYMENT_LIMIT_CENTS = int(os.getenv("PER_PAYMENT_LIMIT_CENTS", "500000"))  # $5,000
-DAILY_LIMIT_CENTS = int(os.getenv("DAILY_LIMIT_CENTS", "1000000"))  # $10,000
+# Limits are in paise (1 rupee = 100 paise) to avoid float rounding problems.
+CURRENCY = "INR"
+PER_PAYMENT_LIMIT_PAISE = int(os.getenv("PER_PAYMENT_LIMIT_PAISE", "50000000"))  # Rs 5,00,000
+DAILY_LIMIT_PAISE = int(os.getenv("DAILY_LIMIT_PAISE", "150000000"))  # Rs 15,00,000
 
 
 def secrets_status() -> dict[str, bool]:
     """Which secrets are set (booleans only, never the values)."""
     return {
         "GEMINI_API_KEY": bool(GEMINI_API_KEY),
-        "PAYPAL_CLIENT_ID": bool(PAYPAL_CLIENT_ID),
-        "PAYPAL_CLIENT_SECRET": bool(PAYPAL_CLIENT_SECRET),
     }
 
 
 def secret_lengths() -> dict[str, int]:
     """Length of each secret after trimming (never the value), to spot pasted spaces or truncated keys."""
-    return {"GEMINI_API_KEY": len(GEMINI_API_KEY), "PAYPAL_CLIENT_ID": len(PAYPAL_CLIENT_ID),
-            "PAYPAL_CLIENT_SECRET": len(PAYPAL_CLIENT_SECRET)}
+    return {"GEMINI_API_KEY": len(GEMINI_API_KEY)}

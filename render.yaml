@@ -6,11 +6,7 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: PAYPAL_BASE_URL
-        value: https://api-m.sandbox.paypal.com
+      - key: PAYOUT_PROVIDER
+        value: simulated   # labelled sandbox: no real money moves
       - key: GEMINI_API_KEY
-        sync: false   # set in the Render dashboard, never commit
-      - key: PAYPAL_CLIENT_ID
-        sync: false
-      - key: PAYPAL_CLIENT_SECRET
-        sync: false
+        sync: false   # set in the Render dashboard, never commit (optional: the demo data is cached)

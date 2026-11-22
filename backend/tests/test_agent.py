@@ -42,7 +42,7 @@ def events(conn, name):
 @pytest.fixture()
 def held(env):
     conn, payouts = env
-    inv = run(conn, "inv12_cedarpine_partial.pdf")
+    inv = run(conn, "inv13_cedarpine_partial.pdf")
     assert inv["status"] == "HELD" and "less than the PO" in inv["reason"]
     return conn, payouts, inv
 
@@ -69,7 +69,7 @@ def test_agent_run_returns_a_proposal_and_pays_nothing(held, monkeypatch):
     out = agent.run_agent(conn, "pay held invoices due this week", today="2026-11-06", client=client)
     assert [s["tool"] for s in out["steps"]] == ["list_invoices", "propose_payment"]
     rec = out["proposal"]["recommended"]
-    assert [r["invoice"]["id"] for r in rec] == [inv["id"]] and out["proposal"]["total_recommended_cents"] == 300000
+    assert [r["invoice"]["id"] for r in rec] == [inv["id"]] and out["proposal"]["total_recommended_paise"] == 31310000
     assert out["proposal"]["not_recommended"] == []
     assert payouts == [] and pipeline.get_invoice(conn, inv["id"])["status"] == "HELD"
     assert events(conn, "agent_proposal") == 1
@@ -84,7 +84,7 @@ def test_proposal_is_built_from_tool_results_not_model_text(held, monkeypatch):
 
 def test_blocked_invoice_is_never_recommended(env):
     conn, payouts = env
-    blocked = run(conn, "inv08_pinnacle_email_changed.pdf")
+    blocked = run(conn, "inv11_lumen_changed_payee.pdf")
     res = agent.dispatch(conn, "propose_payment", {"invoice_id": blocked["id"]})
     assert res["recommended"] is False and "BLOCKED" in res["reasons"][0] and payouts == []
     assert events(conn, "agent_proposal") == 1
@@ -92,7 +92,7 @@ def test_blocked_invoice_is_never_recommended(env):
 
 def test_limits_and_missing_ai_review_are_not_recommended(held, monkeypatch):
     conn, _, inv = held
-    monkeypatch.setattr(config, "PER_PAYMENT_LIMIT_CENTS", 100000)
+    monkeypatch.setattr(config, "PER_PAYMENT_LIMIT_PAISE", 100000)
     res = pipeline.propose_payment(conn, inv["id"])
     assert res["recommended"] is False and "per-payment limit" in res["reasons"][0]
 
@@ -101,7 +101,7 @@ def test_missing_ai_review_is_not_recommended(env):
     conn, _ = env
     conn.execute("DELETE FROM gemini_cache WHERE kind='review'")
     conn.commit()
-    inv = run(conn, "inv12_cedarpine_partial.pdf")
+    inv = run(conn, "inv13_cedarpine_partial.pdf")
     assert pipeline.propose_payment(conn, inv["id"])["recommended"] is False
 
 
@@ -130,33 +130,33 @@ def test_agent_sends_tool_results_back_and_never_sends_the_key(held, monkeypatch
 def test_confirm_pays_through_the_approve_path_once(held):
     conn, payouts, inv = held
     res = pipeline.confirm_proposal(conn, inv["id"])
-    assert res["paid"] is True and len(payouts) == 1 and payouts[0]["cents"] == 300000
+    assert res["paid"] is True and len(payouts) == 1 and payouts[0]["paise"] == 31310000
     assert pipeline.get_invoice(conn, inv["id"])["status"] == "PAID"
     assert events(conn, "owner_approved") == 1 and events(conn, "paid") == 1
     assert pipeline.confirm_proposal(conn, inv["id"])["paid"] is False  # cannot pay twice
     assert len(payouts) == 1
 
 
-def test_confirm_rechecks_at_click_time_payee_email_changed(held):
+def test_confirm_rechecks_at_click_time_payee_changed(held):
     conn, payouts, inv = held
     assert pipeline.propose_payment(conn, inv["id"])["recommended"] is True
-    conn.execute("UPDATE suppliers SET payment_email='other@example.net' WHERE name='Cedar & Pine Furniture'")
+    conn.execute("UPDATE suppliers SET upi_id='other@oksbi' WHERE name='Cedar & Pine Furniture'")
     conn.commit()  # the saved details change after the proposal was made
     res = pipeline.confirm_proposal(conn, inv["id"])
-    assert res["paid"] is False and "payee email" in res["message"].lower() and payouts == []
+    assert res["paid"] is False and "payee changed" in res["message"].lower() and payouts == []
     assert events(conn, "agent_confirm_refused") == 1
 
 
 def test_confirm_rechecks_limits_at_click_time(held, monkeypatch):
     conn, payouts, inv = held
     assert pipeline.propose_payment(conn, inv["id"])["recommended"] is True
-    monkeypatch.setattr(config, "DAILY_LIMIT_CENTS", 100000)
+    monkeypatch.setattr(config, "DAILY_LIMIT_PAISE", 100000)
     assert pipeline.confirm_proposal(conn, inv["id"])["paid"] is False and payouts == []
 
 
 def test_confirm_never_pays_a_blocked_invoice(env):
     conn, payouts = env
-    blocked = run(conn, "inv11_shadowline_unapproved.pdf")
+    blocked = run(conn, "inv12_shadowline_unapproved.pdf")
     assert pipeline.confirm_proposal(conn, blocked["id"])["paid"] is False
     assert pipeline.confirm_proposal(conn, 9999)["paid"] is False and payouts == []
 

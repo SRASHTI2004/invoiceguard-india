@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 from pathlib import Path
@@ -5,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from . import agent, config, db, gemini, pipeline
+from . import agent, config, db, gemini, gst, payouts, pipeline
 
 router = APIRouter(prefix="/api")
 MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -36,11 +37,18 @@ def _act(fn, *args):
         raise HTTPException(400, str(e))
 
 
+LIST_COLUMNS = ("id, filename, supplier_name, supplier_gstin, buyer_gstin, place_of_supply, invoice_number, "
+                "invoice_date, due_date, po_number, taxable_paise, cgst_paise, sgst_paise, igst_paise, total_paise, "
+                "payee_upi, payee_account, payee_ifsc, gst_report, status, decision, reason, risk_score, "
+                "payout_batch_id, payout_status, payout_method, payout_destination, paid_at, created_at")
+
+
 @router.get("/invoices")
 def list_invoices(conn=Depends(get_conn)):
-    return _rows(conn, "SELECT id, filename, supplier_name, invoice_number, invoice_date, due_date, po_number, "
-                       "total_cents, payee_email, status, decision, reason, risk_score, payout_batch_id, "
-                       "payout_status, paid_at, created_at FROM invoices ORDER BY id DESC")
+    rows = _rows(conn, f"SELECT {LIST_COLUMNS} FROM invoices ORDER BY id DESC")
+    for r in rows:
+        r["gst_report"] = json.loads(r["gst_report"]) if r["gst_report"] else []
+    return rows
 
 
 @router.get("/invoices/{invoice_id}")
@@ -78,12 +86,24 @@ def refresh_payout(invoice_id: int, conn=Depends(get_conn)):
 
 @router.get("/suppliers")
 def suppliers(conn=Depends(get_conn)):
-    return _rows(conn, "SELECT id, name, approved, payment_email, notes AS address FROM suppliers ORDER BY name")
+    rows = _rows(conn, "SELECT id, name, approved, gstin, bank_account, ifsc, upi_id, payout_method, "
+                       "notes AS address FROM suppliers ORDER BY name")
+    for r in rows:  # never send a full account number to the browser
+        r["bank_account"] = payouts.mask_account(r["bank_account"]) if r["bank_account"] else None
+        r["state"] = gst.state_name(gst.state_code_of(r["gstin"]))
+    return rows
 
 
 @router.get("/summary")
 def summary(conn=Depends(get_conn)):
     return pipeline.summary(conn)
+
+
+@router.get("/config")
+def public_config():
+    """Non-secret settings the dashboard shows (buyer identity, payout mode label)."""
+    return {"buyer_name": config.BUYER_NAME, "buyer_gstin": config.BUYER_GSTIN, "payout_provider": config.PAYOUT_PROVIDER,
+            "payout_label": payouts.SANDBOX_LABEL, "currency": config.CURRENCY}
 
 
 @router.get("/audit")
@@ -95,10 +115,9 @@ def audit_log(invoice_id: int | None = None, conn=Depends(get_conn)):
 
 @router.post("/demo/run-samples")
 def run_samples(conn=Depends(get_conn)):
-    """Demo helper: RESET all invoices and the audit log, then push the sample PDFs through the firewall in order.
-    Always gives the same result (no leftovers from earlier runs).
-    Rate-limited (DEMO_COOLDOWN_SECONDS, default 10 minutes) because it sends real sandbox payouts: a repeat call
-    inside the window sends nothing and returns the existing results with a friendly note."""
+    """Demo helper: RESET all invoices, payouts and the audit log, then push the sample PDFs through the firewall in order.
+    Always gives the same result (no leftovers from earlier runs). Payouts are simulated, so this is unlimited by
+    default; set DEMO_COOLDOWN_SECONDS to rate-limit it (a repeat call inside the window returns the existing results)."""
     with _demo_lock:  # claim the slot before running so two quick clicks cannot both send payouts
         last = _demo["last_run"]
         recent = last is not None and time.monotonic() - last < config.DEMO_COOLDOWN_SECONDS

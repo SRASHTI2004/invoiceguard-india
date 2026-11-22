@@ -29,14 +29,15 @@ def seed_db(use_cached_gemini: bool = True) -> bool:
     if not db.is_empty():
         return False
     with db.connect() as conn:
-        for name, approved, email, address in SUPPLIERS:
+        for name, approved, gstin, account, ifsc, upi, method, address in SUPPLIERS:
             conn.execute(
-                "INSERT INTO suppliers (name, approved, payment_email, notes) VALUES (?, ?, ?, ?)",
-                (name, approved, email, address),
+                "INSERT INTO suppliers (name, approved, gstin, bank_account, ifsc, upi_id, payout_method, notes) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (name, approved, gstin, account, ifsc, upi, method, address),
             )
         for po_number, supplier, amount, desc in PURCHASE_ORDERS:
             conn.execute(
-                "INSERT INTO purchase_orders (po_number, supplier_id, amount_cents, description) "
+                "INSERT INTO purchase_orders (po_number, supplier_id, amount_paise, description) "
                 "VALUES (?, (SELECT id FROM suppliers WHERE name = ?), ?, ?)",
                 (po_number, supplier, amount, desc),
             )

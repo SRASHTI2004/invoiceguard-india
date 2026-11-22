@@ -73,7 +73,7 @@ def validate_gstin(gstin: str | None) -> tuple[bool, str]:
         return False, f"{g} has an unknown state code {m.group(1)}"
     expected = gstin_check_char(g[:14])
     if g[14] != expected:
-        return False, f"{g} fails the GSTIN check character (should end in {expected}): the number is not real"
+        return False, f"{g} fails the GSTIN check character: the number is not real"
     return True, f"{g} ({STATES[g[:2]]})"
 
 
@@ -140,8 +140,10 @@ def _items_readable(items) -> bool:
 def gstin_results(inv: dict, buyer_gstin: str, saved_supplier_gstin: str | None) -> list[GstResult]:
     out = []
     ok, why = validate_gstin(inv.get("supplier_gstin"))
+    present = bool((inv.get("supplier_gstin") or "").strip())
     out.append(GstResult("supplier_gstin_invalid", "Supplier GSTIN", ok,
-                         ("Valid: " if ok else "Not a real GSTIN: ") + why, BLOCK))
+                         ("Valid: " if ok else "Not a real GSTIN: ") + why,
+                         BLOCK if present else HOLD))  # a GSTIN that fails is fake-looking; a missing one may be a bad read
     if ok and saved_supplier_gstin:
         same = inv["supplier_gstin"].strip().upper() == saved_supplier_gstin.strip().upper()
         out.append(GstResult("supplier_gstin_mismatch", "GSTIN matches saved supplier", same,

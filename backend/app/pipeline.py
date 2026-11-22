@@ -5,11 +5,11 @@ Only decide.py's output (or an explicit owner approval of a HELD invoice) can le
 import json
 import secrets
 
-from . import ai_review, audit, checks, decide, extract, gemini, paypal
+from . import ai_review, audit, checks, decide, extract, gemini, payouts
 
 
 INSUFFICIENT_FUNDS_MESSAGE = (
-    "Payment not sent: the PayPal account has insufficient funds. Add money to the sandbox Business account, "
+    "Payment not sent: the payout wallet has insufficient funds. Top up the wallet, "
     "then click Approve to try again. The invoice passed all checks and nothing was lost.")
 
 
@@ -23,17 +23,21 @@ def get_invoice(conn, invoice_id: int) -> dict | None:
         return None
     inv = dict(row)
     inv["line_items"] = json.loads(inv["line_items"]) if inv["line_items"] else []
+    inv["gst_report"] = json.loads(inv["gst_report"]) if inv["gst_report"] else []
     return inv
+
+
+_SAVED_FIELDS = ("supplier_name", "supplier_gstin", "buyer_gstin", "place_of_supply", "invoice_number",
+                 "invoice_date", "due_date", "po_number", "taxable_paise", "cgst_paise", "sgst_paise", "igst_paise",
+                 "total_paise", "payee_upi", "payee_account", "payee_ifsc")
 
 
 def _save_extraction(conn, inv_id: int, inv: dict) -> None:
     supplier = checks.get_supplier(conn, inv["supplier_name"]) if inv.get("supplier_name") else None
-    conn.execute(
-        "UPDATE invoices SET supplier_id=?, supplier_name=?, invoice_number=?, invoice_date=?, due_date=?, "
-        "po_number=?, total_cents=?, payee_email=?, line_items=? WHERE id=?",
-        (supplier["id"] if supplier else None, inv["supplier_name"], inv["invoice_number"], inv["invoice_date"],
-         inv["due_date"], inv["po_number"], inv["total_cents"], inv["payee_email"],
-         json.dumps(inv["line_items"]), inv_id))
+    sets = ", ".join(f"{f}=?" for f in _SAVED_FIELDS)
+    conn.execute(f"UPDATE invoices SET supplier_id=?, line_items=?, {sets} WHERE id=?",
+                 (supplier["id"] if supplier else None, json.dumps(inv["line_items"]),
+                  *(inv[f] for f in _SAVED_FIELDS), inv_id))
     conn.commit()
 
 
@@ -49,7 +53,10 @@ def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None) -
     try:
         inv = extract.extract_invoice(pdf_bytes, conn, gemini_client)
         _save_extraction(conn, inv_id, inv)
-        findings = checks.run_checks(conn, inv, exclude_id=inv_id)
+        findings, report = checks.run_checks_with_report(conn, inv, exclude_id=inv_id)
+        conn.execute("UPDATE invoices SET gst_report=? WHERE id=?",
+                     (json.dumps([r.as_dict() for r in report]), inv_id))
+        conn.commit()
     except gemini.GeminiError as e:
         findings = [checks.Finding("extraction_failed", checks.HOLD,
                                    f"Could not read the invoice automatically ({e}); please review it manually")]
@@ -78,7 +85,7 @@ def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None) -
 
 
 def pay_invoice(conn, inv_id: int, actor: str) -> dict:
-    """Pay an invoice via PayPal. Payee is ALWAYS the supplier's saved email, never the email on the invoice."""
+    """Pay an invoice. The payee is ALWAYS the supplier's saved UPI ID / bank account, never what the invoice says."""
     # Atomic claim so a double click / retry can never pay twice.
     claimed = conn.execute("UPDATE invoices SET status='PAYING' WHERE id=? AND status IN ('HELD','RECEIVED')",
                            (inv_id,)).rowcount
@@ -86,29 +93,31 @@ def pay_invoice(conn, inv_id: int, actor: str) -> dict:
     if not claimed:
         raise ActionError("This invoice is not waiting for payment")
     inv = get_invoice(conn, inv_id)
-    supplier = conn.execute("SELECT * FROM suppliers WHERE id=?", (inv["supplier_id"],)).fetchone() \
-        if inv["supplier_id"] else None
-    if supplier is None or not supplier["approved"] or not inv["total_cents"]:
+    supplier = conn.execute("SELECT * FROM suppliers WHERE id=?", (inv["supplier_id"],)).fetchone()         if inv["supplier_id"] else None
+    if supplier is None or not supplier["approved"] or not inv["total_paise"]:
         _back_to_held(conn, inv_id, "Cannot pay: supplier or amount is missing or not approved")
         raise ActionError("Cannot pay this invoice: supplier or amount is missing or not approved")
 
-    ref = inv["payout_ref"] or f"ig-{inv_id}-{secrets.token_hex(4)}"  # idempotency key for PayPal
+    ref = inv["payout_ref"] or f"ig-{inv_id}-{secrets.token_hex(4)}"  # idempotency key for the payout
     conn.execute("UPDATE invoices SET payout_ref=? WHERE id=?", (ref, inv_id))
     conn.commit()
     try:
-        res = paypal.send_payout(ref, supplier["payment_email"], inv["total_cents"],
-                                 f"Invoice {inv['invoice_number']} from {supplier['name']}")
-    except paypal.PayPalError as e:
+        dest = payouts.destination_for(supplier, inv["total_paise"])
+        res = payouts.send_payout(conn, ref, dest, inv["total_paise"],
+                                  f"Invoice {inv['invoice_number']} from {supplier['name']}")
+    except payouts.PayoutError as e:
         message = INSUFFICIENT_FUNDS_MESSAGE if e.code == "INSUFFICIENT_FUNDS" else f"Payout failed: {e}"
         _back_to_held(conn, inv_id, message)
-        audit.log(conn, inv_id, "payout_failed", "HOLD", message, {"actor": actor, "paypal_error": str(e)})
+        audit.log(conn, inv_id, "payout_failed", "HOLD", message, {"actor": actor, "payout_error": str(e), "code": e.code})
         raise ActionError(message)
-    conn.execute("UPDATE invoices SET status='PAID', payout_batch_id=?, payout_status=?, paid_at=datetime('now') "
-                 "WHERE id=?", (res["batch_id"], res["status"], inv_id))
+    conn.execute("UPDATE invoices SET status='PAID', payout_batch_id=?, payout_status=?, payout_method=?, "
+                 "payout_destination=?, paid_at=datetime('now') WHERE id=?",
+                 (res["batch_id"], res["status"], res["method"], res["destination"], inv_id))
     conn.commit()
     audit.log(conn, inv_id, "paid", "AUTO_PAY" if actor == "auto" else "APPROVED",
-              f"Paid {checks.money(inv['total_cents'])} to {supplier['name']}",
-              {"actor": actor, "payout_batch_id": res["batch_id"], "payout_status": res["status"]})
+              f"Paid {checks.money(inv['total_paise'])} to {supplier['name']} by {res['method']} "
+              f"({res['destination']}) [{payouts.SANDBOX_LABEL}]",
+              {"actor": actor, "payout_id": res["batch_id"], "payout_status": res["status"], "method": res["method"]})
     return get_invoice(conn, inv_id)
 
 
@@ -132,13 +141,12 @@ def approve(conn, inv_id: int, note: str | None = None) -> dict:
 
 
 def _check_input(inv: dict) -> dict:
-    return {k: inv[k] for k in ("supplier_name", "invoice_number", "invoice_date", "po_number", "total_cents",
-                                "payee_email", "line_items")}
+    return {k: inv[k] for k in ("line_items",) + _SAVED_FIELDS}
 
 
 def hard_blockers(conn, inv: dict) -> list[str]:
     """Fresh deterministic re-check: messages of any BLOCK-level finding (duplicate, PO, payee email, supplier)."""
-    if not inv["supplier_name"] or inv["total_cents"] is None:
+    if not inv["supplier_name"] or inv["total_paise"] is None:
         return []  # unreadable invoice: pay_invoice refuses it
     fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"])
     return [f.message for f in fresh if f.severity == checks.BLOCK]
@@ -161,8 +169,8 @@ def refresh_payout(conn, inv_id: int) -> dict:
     if inv is None or not inv["payout_batch_id"]:
         raise ActionError("This invoice has no payout to refresh")
     try:
-        status = paypal.get_payout_status(inv["payout_batch_id"])
-    except paypal.PayPalError as e:
+        status = payouts.get_payout_status(conn, inv["payout_batch_id"])
+    except payouts.PayoutError as e:
         raise ActionError(str(e))
     conn.execute("UPDATE invoices SET payout_status=? WHERE id=?", (status, inv_id))
     conn.commit()
@@ -173,23 +181,24 @@ def refresh_payout(conn, inv_id: int) -> dict:
 
 
 def reset_demo_data(conn) -> None:
-    """Wipe invoices and the audit log (keeps suppliers, POs and the Gemini cache) and restart the ids at 1,
+    """Wipe invoices, payouts and the audit log (keeps suppliers, POs and the Gemini cache) and restart the ids at 1,
     so the sample run gives the same result every time (no leftover duplicates, daily-limit totals or ids)."""
     conn.execute("DELETE FROM audit_log")
     conn.execute("DELETE FROM invoices")
+    conn.execute("DELETE FROM payouts")
     conn.execute("DELETE FROM sqlite_sequence WHERE name IN ('invoices', 'audit_log')")
     conn.commit()
 
 
 def summary(conn) -> dict:
     def total(where):
-        return conn.execute(f"SELECT COALESCE(SUM(total_cents),0) FROM invoices WHERE {where}").fetchone()[0]
+        return conn.execute(f"SELECT COALESCE(SUM(total_paise),0) FROM invoices WHERE {where}").fetchone()[0]
     counts = {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) n FROM invoices GROUP BY status")}
     return {
-        "total_paid_cents": total("status='PAID'"),
-        "total_blocked_cents": total("status='BLOCKED'"),
-        "total_held_cents": total("status='HELD'"),
-        "money_saved_cents": total("status IN ('BLOCKED','REJECTED')"),
+        "total_paid_paise": total("status='PAID'"),
+        "total_blocked_paise": total("status='BLOCKED'"),
+        "total_held_paise": total("status='HELD'"),
+        "money_saved_paise": total("status IN ('BLOCKED','REJECTED')"),
         "counts": counts,
         "invoice_count": sum(counts.values()),
     }
@@ -205,7 +214,7 @@ def proposal_refusals(conn, inv: dict) -> list[str]:
     """Why this invoice must NOT be recommended / confirmed through the agent (empty = fine). Fresh re-check."""
     if inv["status"] != "HELD":
         return [f"Invoice is {inv['status']}; only invoices on hold can be proposed"]
-    if not inv["supplier_name"] or inv["total_cents"] is None:
+    if not inv["supplier_name"] or inv["total_paise"] is None:
         return ["Invoice could not be read properly; the owner must review it"]
     fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"])
     out = [f.message for f in fresh if f.code not in AGENT_ALLOWED_FINDINGS]
@@ -242,5 +251,5 @@ def confirm_proposal(conn, inv_id: int) -> dict:
         paid = approve(conn, inv_id, note="Approved by the owner by confirming an AP agent proposal")
     except ActionError as e:
         return {"invoice_id": inv_id, "paid": False, "message": str(e)}
-    return {"invoice_id": inv_id, "paid": True, "message": f"Paid {checks.money(paid['total_cents'])}",
+    return {"invoice_id": inv_id, "paid": True, "message": f"Paid {checks.money(paid['total_paise'])}",
             "payout_status": paid["payout_status"]}

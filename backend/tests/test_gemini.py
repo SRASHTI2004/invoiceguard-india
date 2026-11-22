@@ -26,22 +26,32 @@ def gemini_client(payload, calls, status=200):
     return httpx.Client(base_url="https://g.test", transport=httpx.MockTransport(handler))
 
 
-RAW = {"supplier_name": " Acme ", "invoice_number": "A-1", "invoice_date": "2026-11-01", "due_date": None,
-       "po_number": "", "payee_email": "x@y.com", "total": 1240.5,
-       "line_items": [{"description": "Paper", "quantity": 10, "unit_price": 124.05},
-                      {"description": "Half", "quantity": 1.5, "unit_price": 10}]}
+RAW = {"supplier_name": " Acme\nTraders  Pvt Ltd ", "supplier_gstin": " 27aapfu0939f1zv ", "buyer_gstin": None,
+       "place_of_supply": "29-Karnataka", "invoice_number": "A-1", "invoice_date": "2026-11-01", "due_date": None,
+       "po_number": "", "taxable_value": 1240.5, "cgst": None, "sgst": None, "igst": 223.29, "total": 1463.79,
+       "payee_upi": "acme@okhdfcbank", "payee_account": "5020 0034-8712", "payee_ifsc": "hdfc0000240",
+       "line_items": [{"description": "Paper", "hsn_sac": "4802", "quantity": 10, "unit_price": 124.05, "gst_rate": 18},
+                      {"description": "Half", "hsn_sac": None, "quantity": 1.5, "unit_price": 10, "gst_rate": None}]}
 
 
-def test_normalize_converts_to_cents_and_cleans():
+def test_normalize_converts_to_paise_and_cleans():
     n = extract.normalize(RAW)
-    assert n["supplier_name"] == "Acme" and n["po_number"] is None
-    assert n["total_cents"] == 124050
-    assert n["line_items"][0] == {"description": "Paper", "qty": 10, "unit_cents": 12405}
-    assert n["line_items"][1]["qty"] is None  # fractional quantity -> unreadable -> will HOLD in checks
+    assert n["supplier_name"] == "Acme Traders Pvt Ltd" and n["po_number"] is None  # wrapped name is one line again
+    assert n["supplier_gstin"] == "27AAPFU0939F1ZV" and n["buyer_gstin"] is None
+    assert (n["taxable_paise"], n["igst_paise"], n["total_paise"]) == (124050, 22329, 146379)
+    assert n["cgst_paise"] is None and n["sgst_paise"] is None
+    assert n["payee_account"] == "502000348712" and n["payee_ifsc"] == "HDFC0000240"
+    assert n["line_items"][0] == {"description": "Paper", "hsn": "4802", "qty": 10, "unit_paise": 12405, "gst_rate": 18}
+    assert n["line_items"][1]["qty"] is None and n["line_items"][1]["gst_rate"] is None  # unreadable -> will HOLD
 
 
 def test_normalize_handles_missing_total():
-    assert extract.normalize({})["total_cents"] is None
+    assert extract.normalize({})["total_paise"] is None
+
+
+def test_extraction_prompt_asks_for_the_gst_fields():
+    for word in ("GSTIN", "place_of_supply", "hsn_sac", "gst_rate", "cgst", "sgst", "igst", "payee_upi"):
+        assert word in extract.PROMPT or word in extract.SCHEMA["properties"]
 
 
 def test_extract_is_cached_by_file_hash(conn):
