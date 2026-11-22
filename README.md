@@ -5,6 +5,32 @@ Prototype for Prasunex Innovathon, Round 3. Built from the original InvoiceGuard
 
 > **Payouts are a simulated sandbox.** No real money moves and no bank or UPI network is contacted. The dashboard labels every payout "SIMULATED SANDBOX". All suppliers, GSTINs, bank accounts and UPI IDs in the demo are fictional.
 
+## Screenshots
+
+Light theme by default (with a dark mode), desktop at 1440px and phone at 390px. Captured from the running app with a real browser.
+
+| | |
+|---|---|
+| ![Landing page](docs/screenshots/desktop-01-landing.png) **Landing** | ![Dashboard](docs/screenshots/desktop-02-dashboard.png) **Dashboard**: KPIs, money protected over time, needs your attention |
+| ![Invoices](docs/screenshots/desktop-03-invoices.png) **Invoices**: search, status chips, GST badges | ![Invoice drawer with GST failure](docs/screenshots/desktop-04-drawer-gst-fail.png) **Invoice drawer**: six-step journey, wrong tax type held |
+| ![Prompt injection blocked](docs/screenshots/desktop-06-drawer-injection.png) **Hidden prompt injection** stopped at the AI review | ![Approvals](docs/screenshots/desktop-07-approvals.png) **Approvals**: exactly why each invoice is held |
+| ![AP Agent](docs/screenshots/desktop-11-agent-proposal.png) **AP Agent**: tools used, proposal, Confirm or Dismiss | ![Suppliers](docs/screenshots/desktop-08-suppliers.png) **Suppliers**: saved GSTIN and payout details |
+| ![Audit log](docs/screenshots/desktop-09-audit.png) **Audit log** | ![Dark mode](docs/screenshots/desktop-12-dark-dashboard.png) **Dark mode** |
+
+On a phone the sidebar becomes a bottom tab bar and the table becomes cards:
+
+<p>
+  <img src="docs/screenshots/mobile-01-landing.png" width="190" alt="Mobile landing">
+  <img src="docs/screenshots/mobile-02-dashboard.png" width="190" alt="Mobile dashboard">
+  <img src="docs/screenshots/mobile-03-invoices.png" width="190" alt="Mobile invoices">
+  <img src="docs/screenshots/mobile-04-drawer-gst-fail.png" width="190" alt="Mobile invoice drawer">
+</p>
+<p>
+  <img src="docs/screenshots/mobile-07-approvals.png" width="190" alt="Mobile approvals">
+  <img src="docs/screenshots/mobile-11-agent-proposal.png" width="190" alt="Mobile AP agent">
+  <img src="docs/screenshots/mobile-12-dark-dashboard.png" width="190" alt="Mobile dark mode">
+</p>
+
 ## The problem
 
 A small Indian business receives supplier invoices as PDFs and pays them by UPI or bank transfer. Three things go wrong:
@@ -23,7 +49,7 @@ Upload an invoice PDF. InvoiceGuard India reads it with Gemini, runs it through 
 - **Payouts** to the supplier's *saved* UPI ID or bank account, by UPI, IMPS or RTGS depending on the amount.
 - **Idempotent payouts and HOLD-on-failure**: a retry can never pay twice; if a payout fails, the invoice goes back on hold with the reason.
 - **AP agent with propose-then-confirm**: ask in plain English ("pay the held invoice from Cedar & Pine"); the agent can only recommend, you confirm with a click, and every check is re-run at that moment.
-- **Dashboard**: landing page with a "Try with demo data" button, summary cards, status badges, GST results per invoice, supplier list, audit log, light/dark mode and a phone layout.
+- **Dashboard**: a fintech-style app with a landing page ("Try with demo data"), sidebar navigation (bottom tab bar on phones), KPI cards, a money-protected chart, a "Needs your attention" list with one-tap actions, an invoice table with search and filters, and an **invoice drawer** that shows each invoice's journey (Read, GST checks, Rule checks, AI review, Decision, Payout) with a pass or fail and a plain-English reason at every step. Light and dark themes, keyboard and screen-reader friendly. Deep links such as `/#/invoices/8` open an invoice directly.
 
 ## How the GST checks work
 
@@ -95,7 +121,7 @@ Without a `GEMINI_API_KEY` the 13 sample invoices still work instantly because t
 
 ```bash
 cd backend
-python -m pytest                    # 128 tests: GST, checks, payouts, pipeline, agent, Gemini handling, seed data
+python -m pytest                    # 136 tests: GST, checks, payouts, pipeline, timeline, agent, Gemini handling, seed data
 python -m eval.run_eval             # uses the cached Gemini results; add --live-gemini to call Gemini
 ```
 
@@ -116,7 +142,8 @@ backend/app/   gst.py (GST rules)  checks.py (fraud rules)  decide.py  extract.p
                payouts.py  pipeline.py  agent.py  routes.py  money.py
 backend/seed/  data.py (fictional suppliers and invoices)  make_pdfs.py  gemini_cache.json  invoices/
 backend/eval/  run_eval.py        backend/tests/
-frontend/      React + TypeScript dashboard (Vite)
+frontend/      React + TypeScript dashboard (Vite, lucide icons, Inter font; no UI framework)
+docs/          screenshots used in this README
 ```
 
 Money is stored as integer paise, never floats. Secrets live in `.env` (git-ignored) and are never logged.

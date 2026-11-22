@@ -28,8 +28,14 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
-  useEffect(() => { end.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }, [msgs, busy]);
+  useEffect(() => {
+    if (msgs.length === 0) return;
+    const el = log.current;
+    if (el && el.scrollHeight > el.clientHeight + 2) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); // desktop: the log scrolls
+    else end.current?.scrollIntoView({ block: "end", behavior: "smooth" }); // phone: the page scrolls
+  }, [msgs, busy]);
 
   const patch = (id: number, p: Partial<Extract<Msg, { role: "agent" }>>) =>
     setMsgs((m) => m.map((x) => (x.id === id && x.role === "agent" ? { ...x, ...p } : x)));
@@ -73,7 +79,7 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
         <div><h1>AP Agent</h1><p>The agent can recommend, but only code checks plus your click can move money. It has no payment tool: it proposes, you confirm, and every check is re-run on confirm.</p></div>
       </div>
       <div className="card chat-card">
-        <div className="chat-log" role="log" aria-live="polite" aria-label="Conversation with the AP agent">
+        <div className="chat-log" ref={log} role="log" aria-live="polite" aria-label="Conversation with the AP agent">
           <div className="msg msg-agent">
             <div className="who"><Bot size={14} aria-hidden="true" />AP Agent</div>
             <div className="bubble">Hi! Ask me about invoices, or ask me to pay some. I will only <strong>propose</strong>; you decide.</div>
