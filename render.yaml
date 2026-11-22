@@ -1,7 +1,7 @@
 # Render Blueprint. Free plan: no persistent disk, so SQLite is re-created and re-seeded on every start.
 services:
   - type: web
-    name: invoiceguard
+    name: invoiceguard-india
     runtime: docker
     plan: free
     healthCheckPath: /api/health
