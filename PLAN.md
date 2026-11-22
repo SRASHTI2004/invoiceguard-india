@@ -1,3 +1,5 @@
+> **Historical:** this is the original InvoiceGuard (USD, PayPal) plan. The India version replaces PayPal with the payout adapter and adds the GST layer; see README.md.
+
 # InvoiceGuard – Plan
 
 ## Context

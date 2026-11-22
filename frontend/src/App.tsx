@@ -19,7 +19,8 @@ const STEPS: [string, string][] = [
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("invoices");
+  const fromHash = window.location.hash.slice(1) as Tab;  // e.g. /#suppliers opens that tab
+  const [tab, setTab] = useState<Tab>(["invoices", "approvals", "agent", "suppliers", "audit"].includes(fromHash) ? fromHash : "invoices");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [cfg, setCfg] = useState<AppConfig | null>(null);
