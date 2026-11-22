@@ -1,11 +1,11 @@
 import { useState } from "react";
 import Markdown from "../Markdown";
-import { AgentStep, api, ConfirmResult, money, Proposal, ProposalItem } from "../api";
+import { AgentStep, api, ConfirmResult, inr, Proposal, ProposalItem } from "../api";
 
 const EXAMPLES = [
   "Pay all held invoices due this week",
   "What is waiting for approval and why?",
-  "Pay every invoice from Atlas Industrial Parts",
+  "Pay the Cedar & Pine Furniture invoice",
 ];
 
 function Item({ item }: { item: ProposalItem }) {
@@ -110,7 +110,7 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
               <h4>Recommended to pay</h4>
               <ul>{proposal.recommended.map((it) => <Item key={it.invoice!.id} item={it} />)}</ul>
               <button className="primary" disabled={busy} onClick={confirm}>
-                Confirm and pay {proposal.recommended.length} invoice{proposal.recommended.length > 1 ? "s" : ""} ({money(proposal.total_recommended_cents)})
+                Confirm and pay {proposal.recommended.length} invoice{proposal.recommended.length > 1 ? "s" : ""} ({inr(proposal.total_recommended_paise)})
               </button>
             </>
           ) : (

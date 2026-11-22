@@ -1,15 +1,6 @@
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
 import { api, AuditRow, Invoice } from "../api";
-
-const columns: ColDef<AuditRow>[] = [
-  { field: "created_at", headerName: "Time (UTC)", width: 170 },
-  { field: "invoice_id", headerName: "Invoice #", width: 110 },
-  { field: "event", headerName: "Event", width: 160 },
-  { field: "decision", headerName: "Decision", width: 130 },
-  { field: "reason", headerName: "Reason (hover for full text)", flex: 1, minWidth: 300, cellClass: "reason-cell", tooltipField: "reason" },
-];
+import { Badge } from "../components";
 
 // `invoices` changes whenever something happens, so the log reloads with it.
 export default function AuditPage({ invoices }: { invoices: Invoice[] }) {
@@ -20,16 +11,20 @@ export default function AuditPage({ invoices }: { invoices: Invoice[] }) {
   return (
     <section>
       <p className="muted">Every decision and action, newest first.</p>
-      <div className="grid-wrap">
-        <AgGridReact<AuditRow>
-          rowData={rows}
-          columnDefs={columns}
-          defaultColDef={{ sortable: true, filter: true, resizable: true }}
-          rowHeight={52}
-          tooltipShowDelay={300}
-          domLayout="autoHeight"
-        />
-      </div>
+      {rows.length === 0 && <p className="empty">Nothing logged yet.</p>}
+      <ul className="audit">
+        {rows.map((r) => (
+          <li key={r.id}>
+            <div className="audit-head">
+              <span className="audit-event">{r.event.replace(/_/g, " ")}</span>
+              {r.invoice_id != null && <span className="chip">Invoice #{r.invoice_id}</span>}
+              <Badge value={r.decision} />
+              <time className="muted">{r.created_at} UTC</time>
+            </div>
+            {r.reason && <div className="audit-reason">{r.reason}</div>}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

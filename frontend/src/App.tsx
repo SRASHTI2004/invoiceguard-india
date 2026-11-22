@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, Invoice, Summary } from "./api";
+import { api, AppConfig, Invoice, Summary } from "./api";
+import { Spinner } from "./components";
 import AgentPage from "./pages/Agent";
 import ApprovalsPage from "./pages/Approvals";
 import AuditPage from "./pages/Audit";
@@ -9,18 +10,19 @@ import SummaryCards from "./pages/SummaryCards";
 
 type Tab = "invoices" | "approvals" | "agent" | "suppliers" | "audit";
 
-const FLOW: [string, string, string][] = [
-  ["📄", "Read invoice", "AI reads the PDF"],
-  ["🔍", "Code checks", "duplicate, PO, payee, limits"],
-  ["🤖", "AI review", "spots scams and injection"],
-  ["⚖️", "Decision", "pay, hold or block"],
-  ["💸", "PayPal payout", "sandbox, to the saved email"],
+const STEPS: [string, string][] = [
+  ["Read", "AI reads the invoice PDF"],
+  ["GST checks", "GSTIN, tax type, arithmetic"],
+  ["AI review", "scams and hidden instructions"],
+  ["Decide", "pay, hold or block"],
+  ["Pay", "saved UPI ID or bank account"],
 ];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("invoices");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [cfg, setCfg] = useState<AppConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
@@ -40,6 +42,7 @@ export default function App() {
 
   useEffect(() => {
     reload();
+    api.config().then(setCfg).catch(() => undefined);
   }, [reload]);
 
   const runDemo = async () => {
@@ -47,6 +50,7 @@ export default function App() {
     setDemoError(null);
     try {
       await api.runSamples();
+      setTab("invoices");
     } catch (e) {
       setDemoError((e as Error).message);
     }
@@ -56,6 +60,7 @@ export default function App() {
 
   const held = invoices.filter((i) => i.status === "HELD");
   const unfunded = held.filter((i) => i.reason?.includes("insufficient funds"));
+  const empty = loaded && invoices.length === 0;
   const tabs: [Tab, string][] = [
     ["invoices", "Invoices"],
     ["approvals", `Approvals${held.length ? ` (${held.length})` : ""}`],
@@ -66,57 +71,82 @@ export default function App() {
 
   return (
     <div className="app">
-      <header>
-        <h1>🛡️ InvoiceGuard</h1>
-        <p className="tagline">AI payments agent with a fraud firewall. Nothing is paid until every check passes.</p>
-      </header>
-      <ol className="flow" aria-label="How InvoiceGuard works">
-        {FLOW.map(([icon, title, sub]) => (
-          <li key={title}>
-            <span className="flow-icon" aria-hidden="true">{icon}</span>
-            <strong>{title}</strong>
-            <span className="flow-sub">{sub}</span>
-          </li>
-        ))}
-      </ol>
-      {loaded && invoices.length === 0 && (
-        <div className="hero">
-          <h2>See it work in about 30 seconds</h2>
-          <p>
-            Load 12 sample supplier invoices: 5 are valid and get paid through the PayPal sandbox, 6 are fraud attempts
-            (duplicate, inflated amount, changed bank email, hidden prompt injection…) and get blocked, 1 waits for your approval.
-          </p>
-          <button className="primary big" disabled={demoBusy} onClick={runDemo}>
-            {demoBusy ? "Checking 12 invoices…" : "▶ Run the demo"}
-          </button>
-          {demoError && <div className="banner error">Demo failed: {demoError}</div>}
-        </div>
-      )}
-      {!loaded && !error && <p className="muted">Loading… the free server can take up to a minute to wake up.</p>}
-      <SummaryCards summary={summary} />
-      <nav>
-        {tabs.map(([key, label]) => (
-          <button key={key} className={tab === key ? "tab active" : "tab"} onClick={() => setTab(key)}>
-            {label}
-          </button>
-        ))}
-      </nav>
-      {error && <div className="banner error">Could not reach the server: {error}</div>}
-      {unfunded.length > 0 && (
-        <div className="banner funds" role="alert">
-          <strong>💸 {unfunded.length} invoice{unfunded.length > 1 ? "s" : ""} could not be paid: the PayPal account has insufficient funds.</strong>
+      <div className="tricolour" aria-hidden="true" />
+      <header className="topbar">
+        <div className="brand">
+          <span className="logo" aria-hidden="true">₹</span>
           <div>
-            Nothing is lost and each invoice already passed every check. Add money to the sandbox Business account, then open{" "}
-            <button className="link" onClick={() => setTab("approvals")}>Approvals</button> and click Approve to pay{" "}
-            {unfunded.length > 1 ? "them" : "it"}.
+            <h1>InvoiceGuard <span className="india">India</span></h1>
+            {cfg && <div className="buyer">{cfg.buyer_name} · GSTIN <code>{cfg.buyer_gstin}</code></div>}
           </div>
         </div>
+        <span className="sandbox-tag big-tag" title="Payouts are simulated. No real money moves.">SIMULATED SANDBOX · no real money</span>
+      </header>
+
+      {empty ? (
+        <section className="hero">
+          <h2>Stop fake and wrong GST invoices before you pay them.</h2>
+          <p>
+            InvoiceGuard reads each supplier invoice, verifies the GSTIN, tax type and GST arithmetic in code, then pays or holds it.
+          </p>
+          <button className="primary huge" disabled={demoBusy} onClick={runDemo}>
+            {demoBusy ? <Spinner label="Checking 13 invoices…" /> : "Try with demo data"}
+          </button>
+          <div className="hero-sub">13 sample invoices: 5 valid, 7 fraud or error cases, 1 partial delivery. Takes a few seconds.</div>
+          {demoError && <div className="banner error">Demo failed: {demoError}</div>}
+          <ol className="steps-strip" aria-label="How it works">
+            {STEPS.map(([title, sub], i) => (
+              <li key={title}>
+                <span className="step-n">{i + 1}</span>
+                <strong>{title}</strong>
+                <span>{sub}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : (
+        loaded && (
+          <div className="slim">
+            <span>Demo data is loaded. Open an invoice&apos;s GST checks below, or approve the held ones.</span>
+            <button disabled={demoBusy} onClick={runDemo}>
+              {demoBusy ? <Spinner label="Reloading…" /> : "Reload demo data"}
+            </button>
+          </div>
+        )
       )}
-      {tab === "invoices" && <InvoicesPage invoices={invoices} reload={reload} />}
-      {tab === "approvals" && <ApprovalsPage held={held} reload={reload} />}
-      {tab === "agent" && <AgentPage reload={reload} />}
-      {tab === "suppliers" && <SuppliersPage />}
-      {tab === "audit" && <AuditPage invoices={invoices} />}
+      {demoError && !empty && <div className="banner error">Demo failed: {demoError}</div>}
+      {!loaded && !error && <p className="muted"><Spinner label="Loading… the free server can take up to a minute to wake up." /></p>}
+      {error && <div className="banner error">Could not reach the server: {error}</div>}
+
+      {!empty && loaded && (
+        <>
+          <SummaryCards summary={summary} invoices={invoices} />
+          <nav aria-label="Sections">
+            {tabs.map(([key, label]) => (
+              <button key={key} className={tab === key ? "tab active" : "tab"} onClick={() => setTab(key)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          {unfunded.length > 0 && (
+            <div className="banner funds" role="alert">
+              <strong>{unfunded.length} invoice{unfunded.length > 1 ? "s" : ""} could not be paid: the payout wallet has insufficient funds.</strong>
+              <div>
+                Nothing is lost and each invoice already passed every check. Top up the wallet, then open{" "}
+                <button className="link" onClick={() => setTab("approvals")}>Approvals</button> and click Approve.
+              </div>
+            </div>
+          )}
+          {tab === "invoices" && <InvoicesPage invoices={invoices} reload={reload} />}
+          {tab === "approvals" && <ApprovalsPage held={held} reload={reload} />}
+          {tab === "agent" && <AgentPage reload={reload} />}
+          {tab === "suppliers" && <SuppliersPage />}
+          {tab === "audit" && <AuditPage invoices={invoices} />}
+        </>
+      )}
+      <footer className="foot">
+        Prototype for Prasunex Innovathon. All companies, GSTINs, accounts and UPI IDs are fictional.
+      </footer>
     </div>
   );
 }

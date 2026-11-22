@@ -1,14 +1,6 @@
-import { ColDef } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
 import { api, Supplier } from "../api";
-
-const columns: ColDef<Supplier>[] = [
-  { field: "name", headerName: "Supplier", flex: 1, minWidth: 220 },
-  { field: "approved", headerName: "Approved", width: 120, valueFormatter: (p) => (p.value ? "Yes" : "No (suspended)") },
-  { field: "payment_email", headerName: "Saved payment email (PayPal)", flex: 1, minWidth: 280 },
-  { field: "address", headerName: "Address", flex: 1, minWidth: 240 },
-];
+import { Gstin } from "../components";
 
 export default function SuppliersPage() {
   const [rows, setRows] = useState<Supplier[]>([]);
@@ -17,14 +9,26 @@ export default function SuppliersPage() {
   }, []);
   return (
     <section>
-      <p className="muted">Payments always go to the saved email below, never to an email written on an invoice.</p>
-      <div className="grid-wrap">
-        <AgGridReact<Supplier>
-          rowData={rows}
-          columnDefs={columns}
-          defaultColDef={{ sortable: true, filter: true, resizable: true }}
-          domLayout="autoHeight"
-        />
+      <p className="muted">
+        Payments always go to the details saved below, never to anything written on an invoice. An invoice with a different GSTIN,
+        UPI ID or bank account is blocked.
+      </p>
+      <div className="sup-grid">
+        {rows.map((s) => (
+          <article key={s.id} className={s.approved ? "sup" : "sup sup-off"}>
+            <div className="sup-top">
+              <h3>{s.name}</h3>
+              <span className={s.approved ? "badge PAID" : "badge BLOCKED"}>{s.approved ? "Approved" : "Not approved"}</span>
+            </div>
+            <div className="muted">{s.state}</div>
+            <div className="chips"><Gstin value={s.gstin} /></div>
+            <dl className="kv">
+              <div><dt>Saved payout</dt><dd>{s.payout_method === "UPI" ? "UPI" : "Bank transfer"}</dd></div>
+              {s.upi_id && <div><dt>UPI ID</dt><dd><code>{s.upi_id}</code></dd></div>}
+              {s.bank_account && <div><dt>Account</dt><dd><code>{s.bank_account}</code> · <code>{s.ifsc}</code></dd></div>}
+            </dl>
+          </article>
+        ))}
       </div>
     </section>
   );

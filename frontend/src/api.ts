@@ -1,19 +1,39 @@
+export interface GstCheck {
+  code: string;
+  label: string;
+  ok: boolean;
+  message: string;
+  severity: "BLOCK" | "HOLD" | null;
+}
+
 export interface Invoice {
   id: number;
   filename: string | null;
   supplier_name: string | null;
+  supplier_gstin: string | null;
+  buyer_gstin: string | null;
+  place_of_supply: string | null;
   invoice_number: string | null;
   invoice_date: string | null;
   due_date: string | null;
   po_number: string | null;
-  total_cents: number | null;
-  payee_email: string | null;
+  taxable_paise: number | null;
+  cgst_paise: number | null;
+  sgst_paise: number | null;
+  igst_paise: number | null;
+  total_paise: number | null;
+  payee_upi: string | null;
+  payee_account: string | null;
+  payee_ifsc: string | null;
+  gst_report: GstCheck[];
   status: string;
   decision: string | null;
   reason: string | null;
   risk_score: number | null;
   payout_batch_id: string | null;
   payout_status: string | null;
+  payout_method: string | null;
+  payout_destination: string | null;
   paid_at: string | null;
   created_at: string;
 }
@@ -22,17 +42,30 @@ export interface Supplier {
   id: number;
   name: string;
   approved: number;
-  payment_email: string;
+  gstin: string;
+  state: string;
+  bank_account: string | null;
+  ifsc: string | null;
+  upi_id: string | null;
+  payout_method: string;
   address: string | null;
 }
 
 export interface Summary {
-  total_paid_cents: number;
-  total_blocked_cents: number;
-  total_held_cents: number;
-  money_saved_cents: number;
+  total_paid_paise: number;
+  total_blocked_paise: number;
+  total_held_paise: number;
+  money_saved_paise: number;
   counts: Record<string, number>;
   invoice_count: number;
+}
+
+export interface AppConfig {
+  buyer_name: string;
+  buyer_gstin: string;
+  payout_provider: string;
+  payout_label: string;
+  currency: string;
 }
 
 export interface AuditRow {
@@ -51,7 +84,7 @@ export interface AgentStep {
 }
 
 export interface ProposalItem {
-  invoice: { id: number; supplier: string | null; invoice_number: string | null; amount: string | null; amount_cents: number | null; due_date: string | null } | null;
+  invoice: { id: number; supplier: string | null; invoice_number: string | null; amount: string | null; amount_paise: number | null; due_date: string | null } | null;
   reasons: string[];
   recommended: boolean;
 }
@@ -59,7 +92,7 @@ export interface ProposalItem {
 export interface Proposal {
   recommended: ProposalItem[];
   not_recommended: ProposalItem[];
-  total_recommended_cents: number;
+  total_recommended_paise: number;
 }
 
 export interface ConfirmResult {
@@ -68,8 +101,19 @@ export interface ConfirmResult {
   message: string;
 }
 
-export const money = (cents: number | null | undefined) =>
-  cents == null ? "" : (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+/** Paise -> "₹1,24,000.00" (Indian digit grouping: lakhs and crores). */
+export const inr = (paise: number | null | undefined) =>
+  paise == null
+    ? ""
+    : (paise / 100).toLocaleString("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2 });
+
+/** "₹7.2 L" / "₹1.5 Cr" for the big summary numbers. */
+export const inrShort = (paise: number) => {
+  const r = paise / 100;
+  if (r >= 1e7) return `₹${(r / 1e7).toFixed(2)} Cr`;
+  if (r >= 1e5) return `₹${(r / 1e5).toFixed(2)} L`;
+  return inr(paise);
+};
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
@@ -92,6 +136,7 @@ export const api = {
   invoices: () => call<Invoice[]>("/api/invoices"),
   suppliers: () => call<Supplier[]>("/api/suppliers"),
   summary: () => call<Summary>("/api/summary"),
+  config: () => call<AppConfig>("/api/config"),
   audit: () => call<AuditRow[]>("/api/audit"),
   upload: (file: File) => {
     const form = new FormData();
