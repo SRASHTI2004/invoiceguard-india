@@ -13,3 +13,4 @@ Prasunex Innovathon Round 3. Built from the original InvoiceGuard repo. Each ste
 
 ## UI redesign (fintech look)
 - [x] A. Backend `GET /api/invoices/{id}/timeline` (`app/timeline.py`): six-step journey per invoice for the drawer. 8 tests.
+- [x] B-E. Frontend rebuilt as a fintech product: design tokens (light default, dark toggle, indigo brand + warm orange actions, strict status colours with icons), Inter (self-hosted), lucide icons, app shell (sidebar, icon rail on tablets, bottom tab bar on phones), landing, dashboard (KPIs, money-protected chart, needs-attention list), invoices table with search/filters, invoice drawer with six-step journey + GST breakdown, approvals, AP agent chat with proposal cards, suppliers, audit feed, toasts, confirm dialogs, skeleton/empty/error states, focus trap + keyboard support, hash deep links (`#/invoices/8`).

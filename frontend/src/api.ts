@@ -60,6 +60,16 @@ export interface Summary {
   invoice_count: number;
 }
 
+export type StepState = "pass" | "warn" | "fail" | "skipped" | "pending";
+
+export interface TimelineStep {
+  key: string;
+  title: string;
+  state: StepState;
+  summary: string;
+  details: string[];
+}
+
 export interface AppConfig {
   buyer_name: string;
   buyer_gstin: string;
@@ -137,6 +147,7 @@ export const api = {
   suppliers: () => call<Supplier[]>("/api/suppliers"),
   summary: () => call<Summary>("/api/summary"),
   config: () => call<AppConfig>("/api/config"),
+  timeline: (id: number) => call<{ invoice_id: number; steps: TimelineStep[] }>(`/api/invoices/${id}/timeline`),
   audit: () => call<AuditRow[]>("/api/audit"),
   upload: (file: File) => {
     const form = new FormData();

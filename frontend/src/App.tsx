@@ -1,26 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, AppConfig, Invoice, Summary } from "./api";
-import { Spinner } from "./components";
+import InvoiceDrawer from "./Drawer";
+import { useRoute, useTheme } from "./lib";
 import AgentPage from "./pages/Agent";
 import ApprovalsPage from "./pages/Approvals";
 import AuditPage from "./pages/Audit";
+import Dashboard from "./pages/Dashboard";
 import InvoicesPage from "./pages/Invoices";
+import Landing from "./pages/Landing";
 import SuppliersPage from "./pages/Suppliers";
-import SummaryCards from "./pages/SummaryCards";
+import Shell from "./Shell";
+import { ConfirmDialog, ErrorState, Skeleton, ToastProvider, useToast } from "./ui";
 
-type Tab = "invoices" | "approvals" | "agent" | "suppliers" | "audit";
-
-const STEPS: [string, string][] = [
-  ["Read", "AI reads the invoice PDF"],
-  ["GST checks", "GSTIN, tax type, arithmetic"],
-  ["AI review", "scams and hidden instructions"],
-  ["Decide", "pay, hold or block"],
-  ["Pay", "saved UPI ID or bank account"],
-];
-
-export default function App() {
-  const fromHash = window.location.hash.slice(1) as Tab;  // e.g. /#suppliers opens that tab
-  const [tab, setTab] = useState<Tab>(["invoices", "approvals", "agent", "suppliers", "audit"].includes(fromHash) ? fromHash : "invoices");
+function Root() {
+  const toast = useToast();
+  const [route, go] = useRoute();
+  const [theme, toggleTheme] = useTheme();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [cfg, setCfg] = useState<AppConfig | null>(null);
@@ -28,6 +23,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -47,107 +43,57 @@ export default function App() {
   }, [reload]);
 
   const runDemo = async () => {
+    setConfirmReload(false);
     setDemoBusy(true);
     setDemoError(null);
     try {
-      await api.runSamples();
-      setTab("invoices");
+      const r = await api.runSamples();
+      const c = r.summary.counts;
+      toast(r.throttled ? r.note ?? "Demo data was loaded recently." : `Loaded ${r.processed} invoices: ${c.PAID ?? 0} paid, ${c.BLOCKED ?? 0} blocked, ${c.HELD ?? 0} on hold.`, "green");
+      go("dashboard");
     } catch (e) {
       setDemoError((e as Error).message);
+      toast(`Demo failed: ${(e as Error).message}`, "red");
     }
     setDemoBusy(false);
     await reload();
   };
 
   const held = invoices.filter((i) => i.status === "HELD");
-  const unfunded = held.filter((i) => i.reason?.includes("insufficient funds"));
-  const empty = loaded && invoices.length === 0;
-  const tabs: [Tab, string][] = [
-    ["invoices", "Invoices"],
-    ["approvals", `Approvals${held.length ? ` (${held.length})` : ""}`],
-    ["agent", "AP agent"],
-    ["suppliers", "Suppliers"],
-    ["audit", "Audit log"],
-  ];
+  const open = (id: number) => go("invoices", id);
+  const close = () => go("invoices");
+  const drawerInvoice = route.invoiceId ? invoices.find((i) => i.id === route.invoiceId) ?? null : null;
+
+  // First visit (nothing loaded yet): show the landing page, never an empty dashboard.
+  if (!loaded && !error)
+    return <div className="content" role="status" aria-label="Loading"><Skeleton h={40} w="40%" /><p className="muted" style={{ margin: "16px 0" }}>Loading… the free server can take up to a minute to wake up.</p><Skeleton h={160} r={14} /></div>;
+  if (!loaded && error)
+    return <div className="content"><ErrorState message={`Could not reach the server: ${error}`} onRetry={reload} /></div>;
+  if (invoices.length === 0)
+    return <Landing theme={theme} toggleTheme={toggleTheme} onDemo={runDemo} busy={demoBusy} error={demoError} />;
 
   return (
-    <div className="app">
-      <div className="tricolour" aria-hidden="true" />
-      <header className="topbar">
-        <div className="brand">
-          <span className="logo" aria-hidden="true">₹</span>
-          <div>
-            <h1>InvoiceGuard <span className="india">India</span></h1>
-            {cfg && <div className="buyer">{cfg.buyer_name} · GSTIN <code>{cfg.buyer_gstin}</code></div>}
-          </div>
-        </div>
-        <span className="sandbox-tag big-tag" title="Payouts are simulated. No real money moves.">SIMULATED SANDBOX · no real money</span>
-      </header>
-
-      {empty ? (
-        <section className="hero">
-          <h2>Stop fake and wrong GST invoices before you pay them.</h2>
-          <p>
-            InvoiceGuard reads each supplier invoice, verifies the GSTIN, tax type and GST arithmetic in code, then pays or holds it.
-          </p>
-          <button className="primary huge" disabled={demoBusy} onClick={runDemo}>
-            {demoBusy ? <Spinner label="Checking 13 invoices…" /> : "Try with demo data"}
-          </button>
-          <div className="hero-sub">13 sample invoices: 5 valid, 7 fraud or error cases, 1 partial delivery. Takes a few seconds.</div>
-          {demoError && <div className="banner error">Demo failed: {demoError}</div>}
-          <ol className="steps-strip" aria-label="How it works">
-            {STEPS.map(([title, sub], i) => (
-              <li key={title}>
-                <span className="step-n">{i + 1}</span>
-                <strong>{title}</strong>
-                <span>{sub}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      ) : (
-        loaded && (
-          <div className="slim">
-            <span>Demo data is loaded. Open an invoice&apos;s GST checks below, or approve the held ones.</span>
-            <button disabled={demoBusy} onClick={runDemo}>
-              {demoBusy ? <Spinner label="Reloading…" /> : "Reload demo data"}
-            </button>
-          </div>
-        )
+    <Shell page={route.page} cfg={cfg} heldCount={held.length} theme={theme} toggleTheme={toggleTheme} onLoadDemo={() => setConfirmReload(true)} demoBusy={demoBusy}>
+      {error && <div style={{ marginBottom: 16 }}><ErrorState message={`Could not reach the server: ${error}`} onRetry={reload} /></div>}
+      {route.page === "dashboard" && <Dashboard invoices={invoices} summary={summary} loaded={loaded} reload={reload} open={open} />}
+      {route.page === "invoices" && <InvoicesPage invoices={invoices} reload={reload} openId={route.invoiceId} open={open} />}
+      {route.page === "approvals" && <ApprovalsPage held={held} reload={reload} open={open} />}
+      {route.page === "agent" && <AgentPage reload={reload} />}
+      {route.page === "suppliers" && <SuppliersPage />}
+      {route.page === "audit" && <AuditPage invoices={invoices} />}
+      {route.page === "invoices" && route.invoiceId && drawerInvoice && <InvoiceDrawer key={drawerInvoice.id} invoice={drawerInvoice} onClose={close} reload={reload} />}
+      {confirmReload && (
+        <ConfirmDialog title="Reload the demo data?" confirmLabel="Reload demo data" onConfirm={runDemo} onCancel={() => setConfirmReload(false)}
+          body="This clears all invoices and the audit log, then processes the 13 sample invoices again." />
       )}
-      {demoError && !empty && <div className="banner error">Demo failed: {demoError}</div>}
-      {!loaded && !error && <p className="muted"><Spinner label="Loading… the free server can take up to a minute to wake up." /></p>}
-      {error && <div className="banner error">Could not reach the server: {error}</div>}
+    </Shell>
+  );
+}
 
-      {!empty && loaded && (
-        <>
-          <SummaryCards summary={summary} invoices={invoices} />
-          <nav aria-label="Sections">
-            {tabs.map(([key, label]) => (
-              <button key={key} className={tab === key ? "tab active" : "tab"} onClick={() => setTab(key)}>
-                {label}
-              </button>
-            ))}
-          </nav>
-          {unfunded.length > 0 && (
-            <div className="banner funds" role="alert">
-              <strong>{unfunded.length} invoice{unfunded.length > 1 ? "s" : ""} could not be paid: the payout wallet has insufficient funds.</strong>
-              <div>
-                Nothing is lost and each invoice already passed every check. Top up the wallet, then open{" "}
-                <button className="link" onClick={() => setTab("approvals")}>Approvals</button> and click Approve.
-              </div>
-            </div>
-          )}
-          {tab === "invoices" && <InvoicesPage invoices={invoices} reload={reload} />}
-          {tab === "approvals" && <ApprovalsPage held={held} reload={reload} />}
-          {tab === "agent" && <AgentPage reload={reload} />}
-          {tab === "suppliers" && <SuppliersPage />}
-          {tab === "audit" && <AuditPage invoices={invoices} />}
-        </>
-      )}
-      <footer className="foot">
-        Prototype for Prasunex Innovathon. All companies, GSTINs, accounts and UPI IDs are fictional.
-      </footer>
-    </div>
+export default function App() {
+  return (
+    <ToastProvider>
+      <Root />
+    </ToastProvider>
   );
 }
