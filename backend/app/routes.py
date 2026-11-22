@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from . import agent, config, db, gemini, gst, payouts, pipeline
+from . import agent, config, db, gemini, gst, payouts, pipeline, timeline
 
 router = APIRouter(prefix="/api")
 MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -57,6 +57,14 @@ def get_invoice(invoice_id: int, conn=Depends(get_conn)):
     if inv is None:
         raise HTTPException(404, "Invoice not found")
     return inv
+
+
+@router.get("/invoices/{invoice_id}/timeline")
+def invoice_timeline(invoice_id: int, conn=Depends(get_conn)):
+    t = timeline.build(conn, invoice_id)
+    if t is None:
+        raise HTTPException(404, "Invoice not found")
+    return t
 
 
 @router.post("/invoices/upload")

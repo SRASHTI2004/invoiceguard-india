@@ -10,3 +10,6 @@ Prasunex Innovathon Round 3. Built from the original InvoiceGuard repo. Each ste
 - [x] 6. AP agent kept (propose-then-confirm); verified end to end with live Gemini on the new data (propose Cedar & Pine, confirm pays Rs 3,13,100.00 via simulated sandbox).
 - [x] 7. README (India version), DEMO_SCRIPT.md (3-minute flow).
 - [x] Browser check (headless Edge, no extension): desktop 1280px and phone widths (390px landing, 500px with data, Approvals and Suppliers tabs). No overflow or broken layout found. Added `/#tab` deep links.
+
+## UI redesign (fintech look)
+- [x] A. Backend `GET /api/invoices/{id}/timeline` (`app/timeline.py`): six-step journey per invoice for the drawer. 8 tests.
