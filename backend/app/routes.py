@@ -5,12 +5,13 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from seed.data import ACCEPTED_AGO, DEFAULT_ACCEPTED_AGO, UPLOAD_SAMPLES
 
-from . import agent, config, corrections, db, gemini, gst, msme, payouts, pipeline, timeline, timeutil
+from . import agent, config, corrections, db, exports, gemini, gst, msme, payouts, pipeline, timeline, timeutil
 
 router = APIRouter(prefix="/api")
 MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -157,6 +158,14 @@ def download_sample(filename: str):
     if filename not in {s["file"] for s in UPLOAD_SAMPLES}:  # whitelist: no path tricks
         raise HTTPException(404, "Sample not found")
     return FileResponse(UPLOAD_SAMPLES_DIR / filename, media_type="application/pdf", filename=filename)
+
+
+@router.get("/export/tally.csv")
+def export_tally(conn=Depends(get_conn)):
+    """Paid invoices as a CSV for an accountant (Tally-friendly columns)."""
+    stamp = timeutil.today_ist().isoformat()
+    return Response(content="\ufeff" + exports.tally_csv(conn), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="paid-invoices-tally-{stamp}.csv"'})
 
 
 @router.get("/evaluation")

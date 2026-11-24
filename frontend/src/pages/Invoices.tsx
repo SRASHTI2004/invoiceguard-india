@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Download, FileSearch, Search, Upload } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FileSearch, FileSpreadsheet, Search, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, inr, Invoice, SampleInvoice } from "../api";
 import { fmtDate } from "../lib";
@@ -78,6 +78,23 @@ export default function InvoicesPage({ invoices, reload, openId, open }: {
     setBusy(false);
   };
 
+  const exportTally = async () => {
+    try {
+      const { blob, name } = await api.tallyCsv();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast(`Downloaded ${name} with ${invoices.filter((i) => i.status === "PAID").length} paid invoices.`, "green");
+    } catch (e) {
+      toast((e as Error).message, "red");
+    }
+  };
+
   const shown = useMemo(() => {
     const pick = FILTERS.find((f) => f[0] === filter)![2];
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -89,6 +106,10 @@ export default function InvoicesPage({ invoices, reload, openId, open }: {
       <div className="page-head">
         <div><h1>Invoices</h1><p>Select an invoice to see how it moved through every check.</p></div>
         <div className="head-actions">
+          <button className="btn" disabled={!invoices.some((i) => i.status === "PAID")} onClick={exportTally}
+            title="Paid invoices as a CSV for your accountant: date, supplier, GSTIN, invoice no, taxable value, CGST, SGST, IGST, total, payment reference">
+            <FileSpreadsheet size={16} aria-hidden="true" />Export for Tally (CSV)
+          </button>
           <SampleMenu />
           <input ref={fileRef} type="file" accept="application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
           <button className="btn btn-brand" disabled={busy} onClick={() => fileRef.current?.click()}>

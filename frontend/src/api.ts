@@ -223,6 +223,12 @@ export const api = {
   summary: () => call<Summary>("/api/summary"),
   config: () => call<AppConfig>("/api/config"),
   evaluation: () => call<EvaluationReport>("/api/evaluation"),
+  tallyCsv: async () => {
+    const res = await fetch("/api/export/tally.csv");
+    if (!res.ok) throw new Error(res.statusText || `HTTP ${res.status}`);
+    const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "paid-invoices-tally.csv";
+    return { blob: await res.blob(), name };
+  },
   samples: () => call<SampleInvoice[]>("/api/samples"),
   timeline: (id: number) => call<{ invoice_id: number; steps: TimelineStep[] }>(`/api/invoices/${id}/timeline`),
   audit: () => call<AuditRow[]>("/api/audit"),
