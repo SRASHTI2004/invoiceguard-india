@@ -57,6 +57,10 @@ export interface Summary {
   total_blocked_paise: number;
   total_held_paise: number;
   money_saved_paise: number;
+  itc_protected_paise: number;
+  itc_protected_count: number;
+  itc_at_risk_paise: number;
+  itc_at_risk_count: number;
   counts: Record<string, number>;
   invoice_count: number;
 }

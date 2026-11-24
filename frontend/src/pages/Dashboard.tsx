@@ -1,8 +1,22 @@
-import { CheckCircle2, ClipboardCheck, PauseCircle, PiggyBank, ShieldX, type LucideIcon } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, PauseCircle, PiggyBank, ReceiptIndianRupee, ShieldX, type LucideIcon } from "lucide-react";
 import { useApprovalActions } from "../actions";
 import { inr, inrShort, Invoice, Summary } from "../api";
 import { hrefFor, useMedia } from "../lib";
 import { EmptyState, SkeletonCards } from "../ui";
+
+/** Input tax credit protected: GST on blocked invoices with an invalid GSTIN or GST error. */
+function ItcCard({ s }: { s: Summary | null }) {
+  const n = s?.itc_protected_count ?? 0;
+  const risk = s?.itc_at_risk_paise ?? 0;
+  return (
+    <div className="card kpi kpi-itc tone-green">
+      <div className="kpi-top"><span>ITC protected</span><span className="kpi-icon"><ReceiptIndianRupee size={18} aria-hidden="true" /></span></div>
+      <div className="kpi-value">{inr(s?.itc_protected_paise ?? 0)}</div>
+      <div className="kpi-sub">GST on {n} blocked {n === 1 ? "invoice" : "invoices"} with an invalid GSTIN or GST error. Paying these would put your input tax credit at risk.</div>
+      {risk > 0 && <div className="kpi-note">{inr(risk)} more is at risk on {s?.itc_at_risk_count} held {s?.itc_at_risk_count === 1 ? "invoice" : "invoices"} until you decide.</div>}
+    </div>
+  );
+}
 
 function Kpi({ title, value, sub, tone, Icon, href }: { title: string; value: string; sub: string; tone: string; Icon: LucideIcon; href: string }) {
   return (
@@ -94,6 +108,7 @@ export default function Dashboard({ invoices, summary, loaded, reload, open }: {
           <Kpi title="Blocked" tone="red" Icon={ShieldX} value={inrShort(s?.total_blocked_paise ?? 0)} sub={`${s?.counts.BLOCKED ?? 0} invoices stopped`} href={hrefFor("invoices")} />
           <Kpi title="On hold" tone="amber" Icon={PauseCircle} value={inrShort(s?.total_held_paise ?? 0)} sub={`${s?.counts.HELD ?? 0} waiting for you`} href={hrefFor("approvals")} />
           <Kpi title="Money saved" tone="grey" Icon={PiggyBank} value={inrShort(s?.money_saved_paise ?? 0)} sub={`${gstCaught} caught by GST checks`} href={hrefFor("invoices")} />
+          <ItcCard s={s} />
         </section>
       )}
       <div className="grid-2">

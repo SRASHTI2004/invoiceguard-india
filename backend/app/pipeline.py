@@ -215,6 +215,22 @@ def reset_demo_data(conn) -> None:
     conn.commit()
 
 
+def itc_summary(conn) -> dict:
+    """Input tax credit (ITC) at stake. 'Protected' = the GST amount on blocked or rejected invoices that failed a GST
+    check (invalid GSTIN, wrong tax type or arithmetic): paying them would have put the buyer's ITC at risk.
+    'At risk' = the same for invoices still on hold, until a person decides."""
+    out = {"itc_protected_paise": 0, "itc_protected_count": 0, "itc_at_risk_paise": 0, "itc_at_risk_count": 0}
+    for r in conn.execute("SELECT status, cgst_paise, sgst_paise, igst_paise, gst_report FROM invoices "
+                          "WHERE status IN ('BLOCKED','REJECTED','HELD') AND gst_report IS NOT NULL"):
+        if not any(not c["ok"] for c in json.loads(r["gst_report"])):
+            continue
+        gst = (r["cgst_paise"] or 0) + (r["sgst_paise"] or 0) + (r["igst_paise"] or 0)
+        key = "itc_at_risk" if r["status"] == "HELD" else "itc_protected"
+        out[f"{key}_paise"] += gst
+        out[f"{key}_count"] += 1
+    return out
+
+
 def summary(conn) -> dict:
     def total(where):
         return conn.execute(f"SELECT COALESCE(SUM(total_paise),0) FROM invoices WHERE {where}").fetchone()[0]
@@ -226,6 +242,7 @@ def summary(conn) -> dict:
         "money_saved_paise": total("status IN ('BLOCKED','REJECTED')"),
         "counts": counts,
         "invoice_count": sum(counts.values()),
+        **itc_summary(conn),
     }
 
 

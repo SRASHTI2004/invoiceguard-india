@@ -113,3 +113,36 @@ def test_correction_endpoint_and_timeline(env):
         decision = [s for s in t["steps"] if s["key"] == "decision"][0]
         assert any("corrected invoice" in d.lower() for d in decision["details"]) and any("IST" in d for d in decision["details"])
         assert c.post("/api/invoices/9999/request-correction").status_code == 400
+
+
+# ---- ITC protected ---------------------------------------------------------------------------------------------
+def test_itc_protected_is_the_gst_on_blocked_invoices_with_a_gst_failure(env):
+    conn, _ = env
+    for f in ("inv01_mahalaxmi.pdf", "inv06_mahalaxmi_duplicate.pdf", "inv07_atlas_fake_gstin.pdf",
+              "inv08_pinnacle_wrong_tax_type.pdf", "inv10_orchard_wrong_gst_total.pdf", "inv12_shadowline_unapproved.pdf"):
+        run(conn, f)
+    s = pipeline.summary(conn)
+    # only the fake-GSTIN invoice is BLOCKED with a GST failure (the duplicate and unapproved supplier have clean GST)
+    atlas = [r for r in conn.execute("SELECT igst_paise FROM invoices WHERE supplier_name LIKE 'Atlas%'")][0][0]
+    assert s["itc_protected_paise"] == atlas == 4658000 and s["itc_protected_count"] == 1
+    # held invoices with a GST problem are reported separately as still at risk
+    assert s["itc_at_risk_count"] == 2 and s["itc_at_risk_paise"] == 1620000 + 390000
+
+
+def test_itc_moves_when_the_owner_decides(env):
+    conn, _ = env
+    inv = run(conn, "inv08_pinnacle_wrong_tax_type.pdf")
+    assert pipeline.summary(conn)["itc_at_risk_paise"] == 1620000
+    pipeline.reject(conn, inv["id"])
+    s = pipeline.summary(conn)
+    assert s["itc_at_risk_paise"] == 0 and s["itc_protected_paise"] == 1620000  # rejected = protected
+    other = run(conn, "inv10_orchard_wrong_gst_total.pdf")
+    pipeline.approve(conn, other["id"], gst_reason="Supplier will issue a credit note")
+    s = pipeline.summary(conn)
+    assert s["itc_at_risk_paise"] == 0 and s["itc_protected_paise"] == 1620000  # paid ones are not counted as protected
+
+
+def test_itc_is_zero_with_no_invoices(env):
+    conn, _ = env
+    s = pipeline.summary(conn)
+    assert s["itc_protected_paise"] == s["itc_at_risk_paise"] == 0

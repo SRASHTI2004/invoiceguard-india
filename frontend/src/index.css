@@ -106,6 +106,11 @@ a { color: var(--brand); }
 
 /* ---- KPI cards ---- */
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-itc { grid-column: 1 / -1; grid-template-columns: auto 1fr; column-gap: 24px; align-items: center; }
+.kpi-itc .kpi-top { grid-column: 1 / -1; }
+.kpi-itc .kpi-value { grid-row: 2; }
+.kpi-itc .kpi-sub { grid-column: 2; grid-row: 2; }
+.kpi-note { grid-column: 2; font-size: 0.8rem; font-weight: 600; color: var(--amber); }
 .kpi { padding: 16px 24px; display: grid; gap: 4px; align-content: start; position: relative; }
 .kpi-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.82rem; font-weight: 600; }
 .kpi-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--tb); color: var(--t); }
@@ -323,6 +328,7 @@ table.tbl { width: 100%; border-collapse: collapse; }
 
 /* ---- responsive ---- */
 @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 719px) { .kpi-itc { display: grid; grid-template-columns: 1fr; } .kpi-itc .kpi-sub, .kpi-note { grid-column: 1; grid-row: auto; } }
 @media (max-width: 1023px) {
   :root { --sidebar: 72px; }
   .sidebar { padding: 24px 8px; align-items: center; }
