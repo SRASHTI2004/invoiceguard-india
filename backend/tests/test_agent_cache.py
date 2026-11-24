@@ -25,8 +25,10 @@ def demo(env):
 
 
 def test_the_three_chips_are_recorded():
-    entries = json.loads(agent.CACHE_FILE.read_text())
+    all_entries = json.loads(agent.CACHE_FILE.read_text())
+    entries = [e for e in all_entries if e.get("business_id", 1) == 1]
     assert [e["prompt"] for e in entries] == [c.lower() for c in CHIPS]
+    assert [e["prompt"] for e in all_entries if e.get("business_id") == 2] == [c.lower() for c in agent.SUGGESTIONS[2]]
     for e in entries:
         assert e["reply"] and e["steps"] and {s["tool"] for s in e["steps"]} <= {"list_invoices", "run_checks", "propose_payment"}
 

@@ -1,6 +1,6 @@
-import { Bot, Building2, ClipboardCheck, Database, FileText, FlaskConical, LayoutDashboard, Moon, ScrollText, Sun, type LucideIcon } from "lucide-react";
+import { Bot, Building2, ChevronsUpDown, ClipboardCheck, Database, FileText, FlaskConical, LayoutDashboard, Moon, ScrollText, Sun, type LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
-import { AppConfig } from "./api";
+import { AppConfig, Business } from "./api";
 import { hrefFor, Page, Theme } from "./lib";
 import { Spinner } from "./ui";
 
@@ -33,9 +33,24 @@ export function ThemeToggle({ theme, toggle }: { theme: Theme; toggle: () => voi
   );
 }
 
-export default function Shell({ page, cfg, heldCount, theme, toggleTheme, onLoadDemo, demoBusy, children }: {
-  page: Page; cfg: AppConfig | null; heldCount: number; theme: Theme; toggleTheme: () => void;
-  onLoadDemo: () => void; demoBusy: boolean; children: ReactNode;
+/** CA-firm switcher: one login, several client businesses. With a single business it is just the name. */
+function BusinessSwitcher({ businesses, current, name, onChange }: { businesses: Business[]; current: number; name: string; onChange: (id: number) => void }) {
+  if (businesses.length < 2) return <div className="biz-name">{name}</div>;
+  return (
+    <label className="biz-pick">
+      <span className="sr-only">Client business</span>
+      <Building2 size={16} aria-hidden="true" className="biz-ico" />
+      <select value={current} onChange={(e) => onChange(Number(e.target.value))} aria-label="Switch client business">
+        {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}{b.held_count ? ` (${b.held_count} on hold)` : ""}</option>)}
+      </select>
+      <ChevronsUpDown size={14} aria-hidden="true" className="biz-chev" />
+    </label>
+  );
+}
+
+export default function Shell({ page, cfg, businesses, businessId, onBusiness, heldCount, theme, toggleTheme, onLoadDemo, demoBusy, children }: {
+  page: Page; cfg: AppConfig | null; businesses: Business[]; businessId: number; onBusiness: (id: number) => void;
+  heldCount: number; theme: Theme; toggleTheme: () => void; onLoadDemo: () => void; demoBusy: boolean; children: ReactNode;
 }) {
   return (
     <div className="shell">
@@ -62,8 +77,8 @@ export default function Shell({ page, cfg, heldCount, theme, toggleTheme, onLoad
       <div className="main">
         <header className="topbar">
           <div className="biz">
-            <div className="biz-name">{cfg?.buyer_name ?? "Your business"}</div>
-            <div className="biz-sub">GSTIN <code>{cfg?.buyer_gstin ?? "…"}</code></div>
+            <BusinessSwitcher businesses={businesses} current={businessId} name={cfg?.buyer_name ?? "Your business"} onChange={onBusiness} />
+            <div className="biz-sub">{businesses.length > 1 ? "Client business · " : ""}GSTIN <code>{cfg?.buyer_gstin ?? "…"}</code></div>
           </div>
           <ThemeToggle theme={theme} toggle={toggleTheme} />
           <button className="btn" onClick={onLoadDemo} disabled={demoBusy}>

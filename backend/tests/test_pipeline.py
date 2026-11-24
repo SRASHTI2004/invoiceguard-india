@@ -7,14 +7,16 @@ from fastapi.testclient import TestClient
 
 from app import config, payouts, pipeline
 from app.main import app
-from seed.data import DEMO_INVOICES, INVOICES, SUP, compute
+from seed.data import DEMO_INVOICES, DEMO_RUNS, INVOICES, SUP, SUPPLIERS, compute
 
 SAMPLES = Path(__file__).parents[1] / "seed" / "invoices"
 ALL = INVOICES + DEMO_INVOICES
 BY_FILE = {i["file"]: i for i in ALL}
 TOTAL = {i["file"]: compute(i)["total"] for i in ALL}
 PAID_TOTAL = sum(TOTAL[i["file"]] for i in INVOICES if i["expected"] == "AUTO_PAY")
-COUNTS = {"PAID": 5, "BLOCKED": 5, "HELD": 3}  # 5 valid, 5 blocked fraud, 2 held fraud + 1 partial delivery
+COUNTS = {"PAID": 5, "BLOCKED": 5, "HELD": 3}  # business 1: 5 valid, 5 blocked fraud, 2 held fraud + 1 partial delivery
+ALL_DEMO = len(DEMO_RUNS)                       # the demo loads every client business: 13 + 7 = 20 invoices
+PAID_ALL = 8                                    # sandbox payouts per demo load: 5 (business 1) + 3 (business 2)
 
 
 def run(conn, filename):
@@ -200,8 +202,8 @@ def test_api_upload_list_summary(env):
         assert len(suppliers) == 12 and all("gstin" in s for s in suppliers)
         assert not any(s["bank_account"] and "50200034871265" in s["bank_account"] for s in suppliers)  # masked
         assert client.post("/api/invoices/999/approve").status_code == 400
-        assert client.post("/api/demo/run-samples").json()["processed"] == 13  # resets first, then loads all 13
-        assert len(client.get("/api/invoices").json()) == 13
+        assert client.post("/api/demo/run-samples").json()["processed"] == ALL_DEMO  # resets first, then loads every business
+        assert len(client.get("/api/invoices").json()) == 13  # business 1 only
         assert client.get("/api/audit").status_code == 200
         cfg = client.get("/api/config").json()
         assert cfg["currency"] == "INR" and "SIMULATED" in cfg["payout_label"]
@@ -232,12 +234,12 @@ def test_load_samples_gives_the_same_result_every_time(env):
         a = snapshot(conn)
         second = client.post("/api/demo/run-samples").json()
         b = snapshot(conn)
-    assert a == b and first["invoice_ids"] == second["invoice_ids"] == list(range(1, 14))  # ids restart at 1
+    assert a == b and first["invoice_ids"] == second["invoice_ids"] == list(range(1, ALL_DEMO + 1))  # ids restart at 1
     s = second["summary"]
     assert s["counts"] == COUNTS
     assert s["total_paid_paise"] == PAID_TOTAL
-    assert len(sent) == 10  # 5 paid per run; nothing was skipped because of earlier runs
-    assert conn.execute("SELECT COUNT(*) FROM payouts").fetchone()[0] == 5  # the ledger is reset too
+    assert len(sent) == 2 * PAID_ALL  # payouts per run; nothing was skipped because of earlier runs
+    assert conn.execute("SELECT COUNT(*) FROM payouts").fetchone()[0] == PAID_ALL  # the ledger is reset too
 
 
 def test_leftover_data_cannot_change_the_sample_result(env):
@@ -251,7 +253,7 @@ def test_leftover_data_cannot_change_the_sample_result(env):
         client.post("/api/demo/run-samples")
     s = pipeline.summary(conn)
     assert s["counts"] == COUNTS and s["total_paid_paise"] == PAID_TOTAL
-    assert conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0] == 13
+    assert conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0] == ALL_DEMO
 
 
 def test_reset_keeps_suppliers_pos_and_gemini_cache(env):
@@ -262,7 +264,7 @@ def test_reset_keeps_suppliers_pos_and_gemini_cache(env):
     assert conn.execute("SELECT COUNT(*) FROM invoices").fetchone()[0] == 0
     assert conn.execute("SELECT COUNT(*) FROM audit_log").fetchone()[0] == 0
     assert conn.execute("SELECT COUNT(*) FROM payouts").fetchone()[0] == 0
-    assert conn.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0] == 12
+    assert conn.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0] == len(SUPPLIERS)
     assert conn.execute("SELECT COUNT(*) FROM gemini_cache").fetchone()[0] == n_cache
 
 
@@ -294,9 +296,9 @@ def test_demo_reset_is_rate_limited_and_sends_no_extra_payouts(env, monkeypatch)
     monkeypatch.setattr(config, "DEMO_COOLDOWN_SECONDS", 600)
     with TestClient(app) as client:
         first = client.post("/api/demo/run-samples").json()
-        assert first["throttled"] is False and len(sent) == 5
+        assert first["throttled"] is False and len(sent) == PAID_ALL
         before = snapshot(conn)
         again = client.post("/api/demo/run-samples").json()
     assert again["throttled"] is True and "recently" in again["note"]
-    assert len(sent) == 5 and snapshot(conn) == before  # nothing re-run, data untouched
-    assert again["processed"] == 13 and again["summary"]["counts"] == COUNTS
+    assert len(sent) == PAID_ALL and snapshot(conn) == before  # nothing re-run, data untouched
+    assert again["processed"] == ALL_DEMO and again["summary"]["counts"] == COUNTS

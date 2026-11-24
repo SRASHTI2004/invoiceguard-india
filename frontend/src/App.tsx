@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { api, AppConfig, Invoice, Summary } from "./api";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { api, AppConfig, Business, Invoice, setBusiness, Summary } from "./api";
 import InvoiceDrawer from "./Drawer";
 import { useRoute, useTheme } from "./lib";
 import AgentPage from "./pages/Agent";
@@ -25,6 +25,11 @@ function Root() {
   const [demoBusy, setDemoBusy] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [confirmReload, setConfirmReload] = useState(false);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [businessId, setBusinessId] = useState<number>(() => {
+    try { const n = Number(window.localStorage.getItem("ig-business")); return n > 0 ? n : 1; } catch { return 1; }
+  });
+  setBusiness(businessId); // every API call below is for this client business
 
   const reload = useCallback(async () => {
     try {
@@ -38,10 +43,38 @@ function Root() {
     }
   }, []);
 
+  const loadBusinesses = useCallback(async () => {
+    try {
+      const list = await api.businesses();
+      setBusinesses(list);
+      return list;
+    } catch {
+      return [] as Business[];
+    }
+  }, []);
+
   useEffect(() => {
-    reload();
-    api.config().then(setCfg).catch(() => undefined);
+    (async () => {
+      const list = await loadBusinesses();
+      if (list.length && !list.some((b) => b.id === businessId)) { setBusiness(1); setBusinessId(1); }  // a remembered id that no longer exists
+      reload();
+      api.config().then(setCfg).catch(() => undefined);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reload]);
+
+  const switchBusiness = async (id: number) => {
+    setBusiness(id);
+    setBusinessId(id);
+    try { window.localStorage.setItem("ig-business", String(id)); } catch { /* not remembered */ }
+    setLoaded(false);
+    setInvoices([]);
+    setSummary(null);
+    go(route.page === "invoices" ? "invoices" : route.page); // closes any open invoice drawer
+    await Promise.all([reload(), api.config().then(setCfg).catch(() => undefined), loadBusinesses()]);
+    const name = businesses.find((b) => b.id === id)?.name;
+    if (name) toast(`Switched to ${name}.`, "grey");
+  };
 
   const runDemo = async () => {
     setConfirmReload(false);
@@ -50,7 +83,9 @@ function Root() {
     try {
       const r = await api.runSamples();
       const c = r.summary.counts;
-      toast(r.throttled ? r.note ?? "Demo data was loaded recently." : `Loaded ${r.processed} invoices: ${c.PAID ?? 0} paid, ${c.BLOCKED ?? 0} blocked, ${c.HELD ?? 0} on hold.`, "green");
+      const list = await loadBusinesses();
+      toast(r.throttled ? r.note ?? "Demo data was loaded recently."
+        : `Loaded ${r.processed} invoices across ${list.length || 2} client businesses. ${businesses.find((b) => b.id === businessId)?.short_name ?? "This business"}: ${c.PAID ?? 0} paid, ${c.BLOCKED ?? 0} blocked, ${c.HELD ?? 0} on hold.`, "green");
       go("dashboard");
     } catch (e) {
       setDemoError((e as Error).message);
@@ -74,7 +109,8 @@ function Root() {
     return <Landing theme={theme} toggleTheme={toggleTheme} onDemo={runDemo} busy={demoBusy} error={demoError} />;
 
   return (
-    <Shell page={route.page} cfg={cfg} heldCount={held.length} theme={theme} toggleTheme={toggleTheme} onLoadDemo={() => setConfirmReload(true)} demoBusy={demoBusy}>
+    <Shell page={route.page} cfg={cfg} businesses={businesses} businessId={businessId} onBusiness={switchBusiness} heldCount={held.length} theme={theme} toggleTheme={toggleTheme} onLoadDemo={() => setConfirmReload(true)} demoBusy={demoBusy}>
+      <Fragment key={businessId}>
       {error && <div style={{ marginBottom: 16 }}><ErrorState message={`Could not reach the server: ${error}`} onRetry={reload} /></div>}
       {route.page === "dashboard" && <Dashboard invoices={invoices} summary={summary} loaded={loaded} reload={reload} open={open} />}
       {route.page === "invoices" && <InvoicesPage invoices={invoices} reload={reload} openId={route.invoiceId} open={open} />}
@@ -84,6 +120,7 @@ function Root() {
       {route.page === "audit" && <AuditPage invoices={invoices} />}
       {route.page === "evaluation" && <EvaluationPage />}
       {route.page === "invoices" && route.invoiceId && drawerInvoice && <InvoiceDrawer key={drawerInvoice.id} invoice={drawerInvoice} onClose={close} reload={reload} />}
+      </Fragment>
       {confirmReload && (
         <ConfirmDialog title="Reload the demo data?" confirmLabel="Reload demo data" onConfirm={runDemo} onCancel={() => setConfirmReload(false)}
           body="This clears all invoices and the audit log, then processes the 13 sample invoices again." />

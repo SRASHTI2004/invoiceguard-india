@@ -32,7 +32,7 @@ def dmy(iso: str | None) -> str:
         return iso or ""
 
 
-def tally_csv(conn) -> str:
+def tally_csv(conn, business_id: int = 1) -> str:
     """All paid invoices, oldest invoice date first. The supplier name and GSTIN are the SAVED, verified ones (the
     invoice's own text can be upper-cased, wrapped or tampered with), falling back to the extracted text if unlinked."""
     rows = conn.execute(
@@ -40,7 +40,7 @@ def tally_csv(conn) -> str:
         "COALESCE(s.gstin, i.supplier_gstin) AS supplier_gstin, i.invoice_number, i.taxable_paise, i.cgst_paise, "
         "i.sgst_paise, i.igst_paise, i.total_paise, i.payout_batch_id "
         "FROM invoices i LEFT JOIN suppliers s ON s.id = i.supplier_id "
-        "WHERE i.status = 'PAID' ORDER BY i.invoice_date, i.id").fetchall()
+        "WHERE i.status = 'PAID' AND i.business_id = ? ORDER BY i.invoice_date, i.id", (business_id,)).fetchall()
     out = io.StringIO(newline="")
     w = csv.writer(out, lineterminator="\r\n")
     w.writerow(COLUMNS)

@@ -18,28 +18,36 @@ from . import checks, gemini, pipeline
 # the recorded state. Anything else (other questions, a changed state) goes to Gemini live as usual.
 CACHE_FILE = Path(__file__).resolve().parents[1] / "seed" / "agent_cache.json"
 
+# The three suggested prompts for each client business (the recorded ones).
+SUGGESTIONS = {
+    1: ["Pay all held invoices due this week", "What is waiting for approval and why?", "Pay the Cedar & Pine Furniture invoice"],
+    2: ["Pay all held invoices due this week", "What is waiting for approval and why?", "Pay the Chennai Packaging Co. invoice"],
+}
+
 
 def _norm(message: str) -> str:
     return " ".join(message.lower().split())
 
 
-def state_signature(conn) -> str:
-    """A fingerprint of the invoice state the recording was made against."""
-    rows = [tuple(r) for r in conn.execute("SELECT id, status, decision, total_paise FROM invoices ORDER BY id")]
+def state_signature(conn, business_id: int = 1) -> str:
+    """A fingerprint of this business's invoice state the recording was made against."""
+    rows = [tuple(r) for r in conn.execute(
+        "SELECT id, status, decision, total_paise FROM invoices WHERE business_id = ? ORDER BY id", (business_id,))]
     return hashlib.sha256(json.dumps(rows).encode()).hexdigest()
 
 
-def cached_run(conn, message: str) -> dict | None:
+def cached_run(conn, message: str, business_id: int = 1) -> dict | None:
     """Replay a recorded demo answer if this prompt and invoice state were recorded; else None."""
     if not CACHE_FILE.exists():
         return None
     entry = next((e for e in json.loads(CACHE_FILE.read_text())
-                  if e["prompt"] == _norm(message) and e["signature"] == state_signature(conn)), None)
+                  if e.get("business_id", 1) == business_id and e["prompt"] == _norm(message)
+                  and e["signature"] == state_signature(conn, business_id)), None)
     if entry is None:
         return None
     steps = []
     for call in entry["steps"]:
-        steps.append({"tool": call["tool"], "args": call["args"], "result": dispatch(conn, call["tool"], call["args"])})
+        steps.append({"tool": call["tool"], "args": call["args"], "result": dispatch(conn, call["tool"], call["args"], business_id)})
     return {"reply": entry["reply"], "steps": steps, "proposal": build_proposal(steps), "cached": True}
 
 MAX_MESSAGE_CHARS = 500
@@ -78,8 +86,8 @@ def _invoice_view(inv: dict) -> dict:
             "decision": inv["decision"], "reason": _short(inv["reason"])}
 
 
-def _list_invoices(conn, args: dict) -> dict:
-    sql, params = "SELECT id FROM invoices WHERE 1=1", []
+def _list_invoices(conn, args: dict, business_id: int = 1) -> dict:
+    sql, params = "SELECT id FROM invoices WHERE business_id = ?", [business_id]
     for key, clause in (("status", " AND status = ?"), ("due_on_or_after", " AND due_date >= ?"),
                         ("due_on_or_before", " AND due_date <= ?")):
         if args.get(key):
@@ -89,14 +97,14 @@ def _list_invoices(conn, args: dict) -> dict:
     return {"invoices": [_invoice_view(pipeline.get_invoice(conn, i)) for i in ids]}
 
 
-def dispatch(conn, name: str, args: dict) -> dict:
+def dispatch(conn, name: str, args: dict, business_id: int = 1) -> dict:
     """Run one tool call. Never raises for bad model output. None of these tools can move money."""
     try:
         if name == "list_invoices":
-            return _list_invoices(conn, args)
+            return _list_invoices(conn, args, business_id)
         invoice_id = int(args["invoice_id"])
         inv = pipeline.get_invoice(conn, invoice_id)
-        if inv is None:
+        if inv is None or inv["business_id"] != business_id:  # another client's invoice does not exist here
             return {"error": "Invoice not found"}
         if name == "run_checks":
             refusals = pipeline.proposal_refusals(conn, inv)
@@ -123,11 +131,12 @@ def build_proposal(steps: list[dict]) -> dict:
             "total_recommended_paise": sum((i["invoice"] or {}).get("amount_paise") or 0 for i in recommended)}
 
 
-def run_agent(conn, message: str, today: str | None = None, client=None, max_steps: int = 8, use_cache: bool = True) -> dict:
+def run_agent(conn, message: str, today: str | None = None, client=None, max_steps: int = 8, use_cache: bool = True,
+              business_id: int = 1) -> dict:
     """Returns {"reply", "steps", "proposal"}. Raises gemini.GeminiError if Gemini is down. Never pays."""
     message = message.strip()[:MAX_MESSAGE_CHARS]
     if client is None and use_cache:  # replay a recorded demo answer when it applies (never when a test injects a fake Gemini)
-        replay = cached_run(conn, message)
+        replay = cached_run(conn, message, business_id)
         if replay is not None:
             return replay
     today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -150,7 +159,7 @@ def run_agent(conn, message: str, today: str | None = None, client=None, max_ste
         responses = []
         for fc in calls:
             args = fc.get("args") or {}
-            result = dispatch(conn, fc.get("name", ""), args)
+            result = dispatch(conn, fc.get("name", ""), args, business_id)
             steps.append({"tool": fc.get("name"), "args": args, "result": result})
             responses.append({"functionResponse": {"name": fc.get("name"), "response": {"result": result}}})
         contents.append({"role": "user", "parts": responses})
@@ -158,9 +167,9 @@ def run_agent(conn, message: str, today: str | None = None, client=None, max_ste
             "steps": steps, "proposal": build_proposal(steps)}
 
 
-def record(conn, message: str, today: str) -> dict:
+def record(conn, message: str, today: str, business_id: int = 1) -> dict:
     """Used by seed/export_agent_cache.py: run the live agent once (no cache) and return what to store."""
-    signature = state_signature(conn)
-    out = run_agent(conn, message, today=today, use_cache=False)
-    return {"prompt": _norm(message), "signature": signature,
+    signature = state_signature(conn, business_id)
+    out = run_agent(conn, message, today=today, use_cache=False, business_id=business_id)
+    return {"business_id": business_id, "prompt": _norm(message), "signature": signature,
             "steps": [{"tool": s["tool"], "args": s["args"]} for s in out["steps"]], "reply": out["reply"]}

@@ -8,7 +8,7 @@ Each check returns a list of Findings. BLOCK = looks like fraud, HOLD = needs a 
 import sqlite3
 from dataclasses import dataclass
 
-from . import config, gst, timeutil
+from . import businesses, config, gst, timeutil
 from .money import inr
 
 BLOCK = "BLOCK"
@@ -44,8 +44,10 @@ def check_extraction(inv: dict) -> list[Finding]:
     return []
 
 
-def get_supplier(conn: sqlite3.Connection, name: str):
-    return conn.execute("SELECT * FROM suppliers WHERE lower(name) = lower(?)", (name.strip(),)).fetchone()
+def get_supplier(conn: sqlite3.Connection, name: str, business_id: int = 1):
+    """A supplier of THIS business only: another client's supplier is unknown here."""
+    return conn.execute("SELECT * FROM suppliers WHERE lower(name) = lower(?) AND business_id = ?",
+                        (name.strip(), business_id)).fetchone()
 
 
 def check_supplier(supplier, name: str) -> list[Finding]:
@@ -113,22 +115,22 @@ def check_payee(supplier, inv: dict) -> list[Finding]:
                                             f"details for {supplier['name']}")]
 
 
-def paid_today_paise(conn, today: str | None = None) -> int:
+def paid_today_paise(conn, today: str | None = None, business_id: int = 1) -> int:
     """Total paid on the given IST calendar day (default: today in India). paid_at is stored in UTC."""
     day = today or timeutil.today_ist().isoformat()
     row = conn.execute(
-        "SELECT COALESCE(SUM(total_paise), 0) FROM invoices WHERE status = 'PAID' "
-        "AND date(paid_at, '+330 minutes') = ?", (day,)).fetchone()
+        "SELECT COALESCE(SUM(total_paise), 0) FROM invoices WHERE status = 'PAID' AND business_id = ? "
+        "AND date(paid_at, '+330 minutes') = ?", (business_id, day)).fetchone()
     return row[0]
 
 
-def check_limits(conn, inv: dict, today: str | None = None) -> list[Finding]:
+def check_limits(conn, inv: dict, today: str | None = None, business_id: int = 1) -> list[Finding]:
     out = []
     total = inv["total_paise"]
     if total > config.PER_PAYMENT_LIMIT_PAISE:
         out.append(Finding("over_payment_limit", HOLD,
                            f"{money(total)} is over the per-payment limit of {money(config.PER_PAYMENT_LIMIT_PAISE)}"))
-    already = paid_today_paise(conn, today)
+    already = paid_today_paise(conn, today, business_id)
     if already + total > config.DAILY_LIMIT_PAISE:
         out.append(Finding("over_daily_limit", HOLD,
                            f"Paying this would bring today's total to {money(already + total)}, "
@@ -140,14 +142,15 @@ def gst_findings(report: list[gst.GstResult]) -> list[Finding]:
     return [Finding(r.code, r.severity, r.message) for r in report if not r.ok]
 
 
-def run_checks_with_report(conn, inv: dict, exclude_id: int | None = None, today: str | None = None):
+def run_checks_with_report(conn, inv: dict, exclude_id: int | None = None, today: str | None = None, business_id: int = 1):
     """Run every deterministic check. Returns (findings, gst_report). No findings = everything passed."""
     findings = check_extraction(inv)
     if any(f.code in ("missing_fields", "no_line_items", "bad_line_items") for f in findings):
         return findings, []  # cannot run the other checks without the basic fields
-    supplier = get_supplier(conn, inv["supplier_name"])
+    supplier = get_supplier(conn, inv["supplier_name"], business_id)
+    business = businesses.get(conn, business_id)
     findings += check_supplier(supplier, inv["supplier_name"])
-    report = gst.run_gst_checks(inv, config.BUYER_GSTIN, supplier["gstin"] if supplier else None)
+    report = gst.run_gst_checks(inv, business["gstin"], supplier["gstin"] if supplier else None)
     findings += gst_findings(report)
     if supplier is None:
         return findings, report
@@ -155,9 +158,9 @@ def run_checks_with_report(conn, inv: dict, exclude_id: int | None = None, today
     findings += check_po(conn, inv, supplier["id"])
     if supplier["approved"]:
         findings += check_payee(supplier, inv)
-    findings += check_limits(conn, inv, today)
+    findings += check_limits(conn, inv, today, business_id)
     return findings, report
 
 
-def run_checks(conn, inv: dict, exclude_id: int | None = None, today: str | None = None) -> list[Finding]:
-    return run_checks_with_report(conn, inv, exclude_id, today)[0]
+def run_checks(conn, inv: dict, exclude_id: int | None = None, today: str | None = None, business_id: int = 1) -> list[Finding]:
+    return run_checks_with_report(conn, inv, exclude_id, today, business_id)[0]

@@ -10,7 +10,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from app.money import inr
-from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, UPLOAD_SAMPLES, compute
+from seed.data import (BUYERS, DEMO_INVOICES, DEMO_INVOICES2, INVOICES, INVOICES2, SUP, UPLOAD_SAMPLES, UPLOAD_SAMPLES2,
+                       compute)
 
 OUT = Path(__file__).parent / "invoices"
 UPLOAD_OUT = Path(__file__).parent / "upload_samples"
@@ -31,6 +32,10 @@ def wrap(text: str, width: int) -> list[str]:
         else:
             cur = f"{cur} {word}".strip()
     return lines + [cur]
+
+
+def buyer_of(inv) -> dict:
+    return BUYERS[inv.get("business", 1)]
 
 
 def sup_of(inv) -> dict:
@@ -111,8 +116,8 @@ def table(c, inv, x, y, widths, font="Helvetica", size=9, zebra=None, line=True)
 def gst_block(c, inv, x, y, size=9, font="Helvetica"):
     """Supplier GSTIN, buyer, place of supply. Returns the y after it."""
     c.setFont(font, size)
-    for t in [f"Supplier GSTIN: {gstin_of(inv)}", f"Bill to: {BUYER['name']}", f"Buyer GSTIN: {BUYER['gstin']}",
-              f"Place of supply: {BUYER['place_of_supply']}"]:
+    for t in [f"Supplier GSTIN: {gstin_of(inv)}", f"Bill to: {buyer_of(inv)['name']}", f"Buyer GSTIN: {buyer_of(inv)['gstin']}",
+              f"Place of supply: {buyer_of(inv)['place_of_supply']}"]:
         c.drawString(x, y, t)
         y -= size + 4
     return y
@@ -189,8 +194,8 @@ def style_modern(c, inv):
         c.drawString(55 + i * 125, H - 158, v)
         c.setFont("Helvetica-Bold", 9)
     c.setFont("Helvetica", 9)
-    c.drawString(40, H - 195, f"Billed to {BUYER['name']}   |   Buyer GSTIN: {BUYER['gstin']}")
-    c.drawString(40, H - 208, f"Place of supply: {BUYER['place_of_supply']}")
+    c.drawString(40, H - 195, f"Billed to {buyer_of(inv)['name']}   |   Buyer GSTIN: {buyer_of(inv)['gstin']}")
+    c.drawString(40, H - 208, f"Place of supply: {buyer_of(inv)['place_of_supply']}")
     y = banner(c, inv, 40, H - 232)
     y = table(c, inv, 40, min(y, H - 245), [205, 55, 35, 75, 45, 95], zebra=(0.95, 0.97, 1), line=False)
     payment_block(c, inv, 40, y)
@@ -205,8 +210,8 @@ def style_minimal(c, inv):
     c.setFont("Courier", 9)
     for t in [s["address"][:78], f"GSTIN {gstin_of(inv)}", "-" * 66,
               f"TAX INVOICE {inv['number']}   DATE {inv['date']}   DUE {inv['due']}",
-              f"ORDER REF {inv['po']}", f"CUSTOMER: {BUYER['name']}  GSTIN {BUYER['gstin']}",
-              f"PLACE OF SUPPLY: {BUYER['place_of_supply']}", "-" * 66]:
+              f"ORDER REF {inv['po']}", f"CUSTOMER: {buyer_of(inv)['name']}  GSTIN {buyer_of(inv)['gstin']}",
+              f"PLACE OF SUPPLY: {buyer_of(inv)['place_of_supply']}", "-" * 66]:
         y -= 14
         c.drawString(40, y, t)
     y = banner(c, inv, 40, y - 18, 70, (0, 0, 0))
@@ -241,7 +246,7 @@ def style_sidebar(c, inv):
     c.drawString(200, H - 55, "Tax Invoice")
     c.setFont("Helvetica", 9)
     for i, t in enumerate([f"Number: {inv['number']}", f"Date: {inv['date']}   Due: {inv['due']}", f"Your PO: {inv['po']}",
-                           f"To: {BUYER['name']}", f"Buyer GSTIN: {BUYER['gstin']}", f"Place of supply: {BUYER['place_of_supply']}"]):
+                           f"To: {buyer_of(inv)['name']}", f"Buyer GSTIN: {buyer_of(inv)['gstin']}", f"Place of supply: {buyer_of(inv)['place_of_supply']}"]):
         c.drawString(200, H - 82 - i * 13, t)
     y = banner(c, inv, 200, H - 175, 55)
     table(c, inv, 200, min(y, H - 190), [120, 45, 25, 60, 35, 65], size=7.5)
@@ -260,7 +265,7 @@ def style_statement(c, inv):
     c.drawString(50, H - 114, f"TAX INVOICE  {inv['number']}")
     c.setFont("Times-Roman", 10.5)
     c.drawString(50, H - 129, f"Issued {inv['date']}  |  Payment due {inv['due']}  |  Order {inv['po']}")
-    c.drawString(50, H - 143, f"Customer: {BUYER['name']}  (GSTIN {BUYER['gstin']})  |  Place of supply: {BUYER['place_of_supply']}")
+    c.drawString(50, H - 143, f"Customer: {buyer_of(inv)['name']}  (GSTIN {buyer_of(inv)['gstin']})  |  Place of supply: {buyer_of(inv)['place_of_supply']}")
     y = banner(c, inv, 40, H - 182, 78, inv["accent"])
     y = table(c, inv, 40, min(y, H - 195), [210, 55, 35, 75, 45, 90], font="Times", size=10)
     payment_block(c, inv, 40, y, font="Times-Roman", size=10)
@@ -275,17 +280,17 @@ def main(only=None):
     OUT.mkdir(exist_ok=True)
     UPLOAD_OUT.mkdir(exist_ok=True)
     labels = []
-    for inv in INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES:
+    for inv in INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES + INVOICES2 + DEMO_INVOICES2 + UPLOAD_SAMPLES2:
         if inv in INVOICES:  # demo-only invoices are not part of the eval labels
             labels.append({k: inv[k] for k in ("file", "supplier", "number", "is_fraud", "expected", "category")})
         if only and inv["file"] not in only:
             continue
-        c = canvas.Canvas(str((UPLOAD_OUT if inv in UPLOAD_SAMPLES else OUT) / inv["file"]), pagesize=A4, invariant=1)  # invariant: same bytes every run
+        c = canvas.Canvas(str((UPLOAD_OUT if inv in UPLOAD_SAMPLES + UPLOAD_SAMPLES2 else OUT) / inv["file"]), pagesize=A4, invariant=1)  # invariant: same bytes every run
         c.setTitle(f"Tax Invoice {inv['number']}")
         STYLES[inv["style"]](c, inv)
         c.save()
     (Path(__file__).parent / "labels.json").write_text(json.dumps(labels, indent=2))
-    print(f"wrote {len(INVOICES) + len(DEMO_INVOICES)} PDFs to {OUT} and {len(UPLOAD_SAMPLES)} to {UPLOAD_OUT}")
+    print(f"wrote {len(INVOICES) + len(DEMO_INVOICES) + len(INVOICES2) + len(DEMO_INVOICES2)} PDFs to {OUT} and {len(UPLOAD_SAMPLES) + len(UPLOAD_SAMPLES2)} to {UPLOAD_OUT}")
 
 
 if __name__ == "__main__":

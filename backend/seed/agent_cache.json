@@ -18,7 +18,8 @@
     }
    }
   ],
-  "reply": "I have submitted a payment proposal for approval:\n\n**Recommended for Payment:**\n* **Invoice #CP/26-27/318** \u2013 Cedar & Pine Furniture (\u20b93,13,100.00, Due: 2026-11-09)\n  * **Reasons:** On hold only because: Invoice total \u20b93,13,100.00 is less than the PO amount \u20b98,00,000.00; Fresh checks found no fraud signals or limit problems and the AI review risk is low.\n\n**Not Recommended:**\n* None\n\n*(Note: No payments have been executed. Please review and confirm the proposal to process payment.)*"
+  "reply": "I have submitted a payment proposal for approval:\n\n**Recommended for Payment:**\n* **Invoice #CP/26-27/318** \u2013 Cedar & Pine Furniture (\u20b93,13,100.00, Due: 2026-11-09)\n  * **Reasons:** On hold only because: Invoice total \u20b93,13,100.00 is less than the PO amount \u20b98,00,000.00; Fresh checks found no fraud signals or limit problems and the AI review risk is low.\n\n**Not Recommended:**\n* None\n\n*(Note: No payments have been executed. Please review and confirm the proposal to process payment.)*",
+  "business_id": 1
  },
  {
   "prompt": "what is waiting for approval and why?",
@@ -47,7 +48,8 @@
     }
    }
   ],
-  "reply": "There are currently 3 invoices on hold waiting for approval:\n\n1. **Cedar & Pine Furniture** (Invoice `CP/26-27/318`)\n   - **Amount:** \u20b93,13,100.00\n   - **Due Date:** 2026-11-09\n   - **Why it's on hold:** The invoice total is less than the purchase order amount of \u20b98,00,000.00 (partial billing).\n\n2. **Pinnacle Print & Design** (Invoice `PP/2217`)\n   - **Amount:** \u20b91,43,700.00\n   - **Due Date:** 2026-11-18\n   - **Why it's on hold:** Incorrect tax type charged (charged CGST & SGST instead of IGST for an inter-state supply).\n\n3. **Orchard Catering Services** (Invoice `OCS/9021`)\n   - **Amount:** \u20b987,600.00\n   - **Due Date:** 2026-11-19\n   - **Why it's on hold:** The invoice total is miscalculated (taxable \u20b978,000.00 + GST \u20b93,900.00 should equal \u20b981,900.00)."
+  "reply": "There are currently 3 invoices on hold waiting for approval:\n\n1. **Cedar & Pine Furniture** (Invoice `CP/26-27/318`)\n   - **Amount:** \u20b93,13,100.00\n   - **Due Date:** 2026-11-09\n   - **Why it's on hold:** The invoice total is less than the purchase order amount of \u20b98,00,000.00 (partial billing).\n\n2. **Pinnacle Print & Design** (Invoice `PP/2217`)\n   - **Amount:** \u20b91,43,700.00\n   - **Due Date:** 2026-11-18\n   - **Why it's on hold:** Incorrect tax type charged (charged CGST & SGST instead of IGST for an inter-state supply).\n\n3. **Orchard Catering Services** (Invoice `OCS/9021`)\n   - **Amount:** \u20b987,600.00\n   - **Due Date:** 2026-11-19\n   - **Why it's on hold:** The invoice total is miscalculated (taxable \u20b978,000.00 + GST \u20b93,900.00 should equal \u20b981,900.00).",
+  "business_id": 1
  },
  {
   "prompt": "pay the cedar & pine furniture invoice",
@@ -64,6 +66,69 @@
     }
    }
   ],
-  "reply": "I have submitted a payment proposal for the Cedar & Pine Furniture invoice:\n\n* **Supplier:** Cedar & Pine Furniture\n* **Invoice #:** CP/26-27/318\n* **Amount:** \u20b93,13,100.00\n* **Recommendation:** **Recommended** for payment\n* **Reason:** The invoice was on hold solely because the total amount (\u20b93,13,100.00) is less than the PO amount (\u20b98,00,000.00). Fresh checks found no fraud signals or limit problems, and AI review risk is low.\n\n*Note: No funds have been disbursed. Please review and confirm the payment proposal in your dashboard to proceed.*"
+  "reply": "I have submitted a payment proposal for the Cedar & Pine Furniture invoice:\n\n* **Supplier:** Cedar & Pine Furniture\n* **Invoice #:** CP/26-27/318\n* **Amount:** \u20b93,13,100.00\n* **Recommendation:** **Recommended** for payment\n* **Reason:** The invoice was on hold solely because the total amount (\u20b93,13,100.00) is less than the PO amount (\u20b98,00,000.00). Fresh checks found no fraud signals or limit problems, and AI review risk is low.\n\n*Note: No funds have been disbursed. Please review and confirm the payment proposal in your dashboard to proceed.*",
+  "business_id": 1
+ },
+ {
+  "business_id": 2,
+  "prompt": "pay all held invoices due this week",
+  "signature": "f08013de08cbf46d897e5b732502469590820842517257071ffe7547a63a550f",
+  "steps": [
+   {
+    "tool": "list_invoices",
+    "args": {
+     "status": "HELD",
+     "due_on_or_after": "2026-11-16",
+     "due_on_or_before": "2026-11-22"
+    }
+   },
+   {
+    "tool": "propose_payment",
+    "args": {
+     "invoice_id": 17
+    }
+   },
+   {
+    "tool": "propose_payment",
+    "args": {
+     "invoice_id": 20
+    }
+   }
+  ],
+  "reply": "I have reviewed the held invoices due this week:\n\n*   **Chennai Packaging Co. (Invoice CPC/26-27/790):** Recommended for payment. The invoice amount is lower than the PO amount, but there are no fraud signals or limit issues.\n*   **Tirupur Dyeing Works (Invoice TDW/0912):** Not recommended. The tax type is incorrect (IGST was charged instead of CGST/SGST)."
+ },
+ {
+  "business_id": 2,
+  "prompt": "what is waiting for approval and why?",
+  "signature": "f08013de08cbf46d897e5b732502469590820842517257071ffe7547a63a550f",
+  "steps": [
+   {
+    "tool": "list_invoices",
+    "args": {
+     "status": "HELD"
+    }
+   }
+  ],
+  "reply": "There are two invoices currently on hold:\n\n*   **Tirupur Dyeing Works (TDW/0912):** \u20b963,000.00. The tax type is incorrect; it should be CGST + SGST, but IGST was charged.\n*   **Chennai Packaging Co. (CPC/26-27/790):** \u20b960,480.00. The invoice total is less than the purchase order amount of \u20b92,00,000.00."
+ },
+ {
+  "business_id": 2,
+  "prompt": "pay the chennai packaging co. invoice",
+  "signature": "f08013de08cbf46d897e5b732502469590820842517257071ffe7547a63a550f",
+  "steps": [
+   {
+    "tool": "list_invoices",
+    "args": {
+     "status": "HELD"
+    }
+   },
+   {
+    "tool": "propose_payment",
+    "args": {
+     "invoice_id": 20
+    }
+   }
+  ],
+  "reply": "I have reviewed the Chennai Packaging Co. invoice (ID 20).\n\nI recommend proceeding with this payment. Although the invoice total is less than the PO amount, the fraud checks found no issues and the risk is low. You can now review and confirm this in your dashboard."
  }
 ]

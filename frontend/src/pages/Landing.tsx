@@ -33,9 +33,9 @@ export default function Landing({ theme, toggleTheme, onDemo, busy, error }: {
           <h1>Stop fraud <em>before money moves.</em></h1>
           <p className="lead">InvoiceGuard India reads every supplier invoice, verifies the GST in code, and pays only what is safe to pay.</p>
           <button className="btn btn-primary btn-lg" onClick={onDemo} disabled={busy}>
-            {busy ? <Spinner label="Checking 13 invoices…" /> : <><Zap size={20} aria-hidden="true" />Try with demo data</>}
+            {busy ? <Spinner label="Checking 20 invoices…" /> : <><Zap size={20} aria-hidden="true" />Try with demo data</>}
           </button>
-          <p className="land-sub">13 sample invoices: 5 valid, 7 fraud or error cases, 1 partial delivery. Takes a few seconds, no sign-up.</p>
+          <p className="land-sub">Two client businesses and 20 sample invoices: valid ones, fraud and GST errors, a partial delivery. Takes a few seconds, no sign-up.</p>
           {error && <div className="alert tone-red" role="alert" style={{ marginTop: 16 }}><div><strong>Demo failed</strong>{error}</div></div>}
           <ul className="values">
             {VALUES.map(([Icon, title, text]) => (

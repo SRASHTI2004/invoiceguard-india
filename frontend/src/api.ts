@@ -145,7 +145,19 @@ export interface EvaluationReport {
   cases: EvalCase[];
 }
 
+export interface Business {
+  id: number;
+  name: string;
+  short_name: string;
+  gstin: string;
+  city: string | null;
+  invoice_count: number;
+  held_count: number;
+}
+
 export interface AppConfig {
+  business_id: number;
+  short_name: string;
   buyer_name: string;
   buyer_gstin: string;
   payout_provider: string;
@@ -200,8 +212,13 @@ export const inrShort = (paise: number) => {
   return inr(paise);
 };
 
+/** The client business every API call is for (a CA firm switches between several). Sent as X-Business-Id. */
+let currentBusiness = 1;
+export const setBusiness = (id: number) => { currentBusiness = id; };
+const scoped = (init?: RequestInit): RequestInit => ({ ...init, headers: { ...(init?.headers as Record<string, string> | undefined), "X-Business-Id": String(currentBusiness) } });
+
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, scoped(init));
   if (!res.ok) {
     let detail = res.statusText || `HTTP ${res.status}`;
     try {
@@ -222,9 +239,11 @@ export const api = {
   suppliers: () => call<Supplier[]>("/api/suppliers"),
   summary: () => call<Summary>("/api/summary"),
   config: () => call<AppConfig>("/api/config"),
+  businesses: () => call<Business[]>("/api/businesses"),
+  agentSuggestions: () => call<{ suggestions: string[] }>("/api/agent/suggestions"),
   evaluation: () => call<EvaluationReport>("/api/evaluation"),
   tallyCsv: async () => {
-    const res = await fetch("/api/export/tally.csv");
+    const res = await fetch("/api/export/tally.csv", scoped());
     if (!res.ok) throw new Error(res.statusText || `HTTP ${res.status}`);
     const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "paid-invoices-tally.csv";
     return { blob: await res.blob(), name };

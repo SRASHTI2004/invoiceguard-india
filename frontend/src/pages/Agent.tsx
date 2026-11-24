@@ -4,7 +4,7 @@ import Markdown from "../Markdown";
 import { AgentStep, api, ConfirmResult, inr, Proposal, ProposalItem } from "../api";
 import { ErrorState, Spinner, useToast } from "../ui";
 
-const EXAMPLES = ["Pay all held invoices due this week", "What is waiting for approval and why?", "Pay the Cedar & Pine Furniture invoice"];
+const FALLBACK = ["Pay all held invoices due this week", "What is waiting for approval and why?"];
 
 type Msg =
   | { id: number; role: "user"; text: string }
@@ -27,6 +27,8 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [examples, setExamples] = useState<string[]>(FALLBACK);
+  useEffect(() => { api.agentSuggestions().then((r) => setExamples(r.suggestions)).catch(() => undefined); }, []);
   const end = useRef<HTMLDivElement>(null);
   const log = useRef<HTMLDivElement>(null);
   const nextId = useRef(1);
@@ -130,7 +132,7 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
         <div className="composer">
           {msgs.length === 0 && (
             <div className="chips" role="group" aria-label="Example requests">
-              {EXAMPLES.map((ex) => <button key={ex} className="chip" onClick={() => send(ex)} disabled={busy}>{ex}</button>)}
+              {examples.map((ex) => <button key={ex} className="chip" onClick={() => send(ex)} disabled={busy}>{ex}</button>)}
             </div>
           )}
           <form onSubmit={(e: FormEvent) => { e.preventDefault(); send(text); }}>

@@ -14,15 +14,16 @@ import time
 from pathlib import Path
 
 from app import ai_review, config, db, extract, gemini
-from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, UPLOAD_SAMPLES, compute
+from seed.data import (BUYERS, DEMO_INVOICES, DEMO_INVOICES2, INVOICES, INVOICES2, SUP, UPLOAD_SAMPLES, UPLOAD_SAMPLES2,
+                       compute)
 from seed.make_pdfs import pay_details
 
 HERE = Path(__file__).parent
-ALL = INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES
+ALL = INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES + INVOICES2 + DEMO_INVOICES2 + UPLOAD_SAMPLES2
 
 
 def pdf_path(inv: dict) -> Path:
-    return HERE / ("upload_samples" if inv in UPLOAD_SAMPLES else "invoices") / inv["file"]
+    return HERE / ("upload_samples" if inv in UPLOAD_SAMPLES + UPLOAD_SAMPLES2 else "invoices") / inv["file"]
 
 
 def _rupees(paise):
@@ -32,9 +33,10 @@ def _rupees(paise):
 def synthetic_extract(inv: dict) -> dict:
     """The extraction a correct reader would produce for this sample (money in rupees, as Gemini returns it)."""
     t, s, pay = compute(inv), SUP[inv["supplier"]], pay_details(inv)
+    buyer = BUYERS[inv.get("business", 1)]
     return {
         "supplier_name": inv["supplier"], "supplier_gstin": inv.get("gstin") or s["gstin"],
-        "buyer_gstin": BUYER["gstin"], "place_of_supply": BUYER["place_of_supply"],
+        "buyer_gstin": buyer["gstin"], "place_of_supply": buyer["place_of_supply"],
         "invoice_number": inv["number"], "invoice_date": inv["date"], "due_date": inv["due"], "po_number": inv["po"],
         "taxable_value": _rupees(t["taxable"]), "cgst": _rupees(t["cgst"]), "sgst": _rupees(t["sgst"]),
         "igst": _rupees(t["igst"]), "total": _rupees(t["total"]),
@@ -54,11 +56,25 @@ def synthetic_review(inv: dict) -> dict:
     return {"risk_score": 0.0, "signals": [], "reasons": []}
 
 
+def _fetch(conn, data: bytes) -> None:
+    """Call Gemini for extraction + review, retrying: it can time out or be briefly overloaded."""
+    for attempt in range(1, 5):
+        try:
+            extract.extract_invoice(data, conn)
+            time.sleep(3)
+            ai_review.review_invoice(data, conn)
+            time.sleep(3)
+            return
+        except Exception as e:
+            print(f"  attempt {attempt} failed ({type(e).__name__}); retrying", flush=True)
+            time.sleep(8)
+    raise SystemExit("Gemini kept failing; run again later (finished PDFs are already saved)")
+
+
 def main():
     synth = "--synthesize" in sys.argv
     CACHE = HERE / "gemini_cache.json"
     have = {(e["file_hash"], e["kind"]): e for e in json.loads(CACHE.read_text())} if CACHE.exists() and not synth else {}
-    out = []
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config.DB_PATH = str(Path(tmp) / "cache.db")
         db.init_db()
@@ -67,23 +83,19 @@ def main():
             data = pdf_path(inv).read_bytes()
             h = gemini.pdf_hash(data)
             if all((h, k) in have for k in ("extract", "review")):  # already cached: keep it, spend no quota
-                out += [have[(h, k)] for k in ("extract", "review")]
                 continue
             if synth:
                 results = {"extract": synthetic_extract(inv), "review": synthetic_review(inv)}
             else:
-                extract.extract_invoice(data, conn)
-                time.sleep(3)
-                ai_review.review_invoice(data, conn)
-                time.sleep(3)
+                _fetch(conn, data)
                 results = {k: json.loads(conn.execute("SELECT result_json FROM gemini_cache WHERE file_hash=? AND kind=?",
                                                       (h, k)).fetchone()[0]) for k in ("extract", "review")}
                 print("cached", inv["file"], flush=True)
             for kind, result in results.items():
-                out.append({"file": inv["file"], "file_hash": h, "kind": kind, "result": result})
+                have[(h, kind)] = {"file": inv["file"], "file_hash": h, "kind": kind, "result": result}
+            CACHE.write_text(json.dumps(list(have.values()), indent=1))  # save after every PDF
         conn.close()
-    CACHE.write_text(json.dumps(out, indent=1))
-    print(f"exported {len(out)} cached results ({'SYNTHESIZED, not real Gemini output' if synth else 'live Gemini'})")
+    print(f"cache holds {len(have)} results ({'SYNTHESIZED, not real Gemini output' if synth else 'live Gemini for new PDFs'})")
 
 
 if __name__ == "__main__":

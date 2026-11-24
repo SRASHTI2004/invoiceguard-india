@@ -4,6 +4,15 @@ import sqlite3
 from . import config
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS businesses (       -- the client businesses a CA firm manages
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    short_name  TEXT NOT NULL,
+    gstin       TEXT NOT NULL,        -- invoices must be billed to this GSTIN
+    city        TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS suppliers (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     name           TEXT NOT NULL UNIQUE,
@@ -16,7 +25,8 @@ CREATE TABLE IF NOT EXISTS suppliers (
     notes          TEXT,                 -- address
     email          TEXT,                 -- accounts contact, used to draft correction requests
     msme           TEXT,                 -- NULL, 'micro' or 'small' (Section 43B(h) payment timer)
-    msme_written_agreement INTEGER NOT NULL DEFAULT 0   -- 1 = written agreement, so the 45-day limit applies; else 15
+    msme_written_agreement INTEGER NOT NULL DEFAULT 0,  -- 1 = written agreement, so the 45-day limit applies; else 15
+    business_id    INTEGER NOT NULL DEFAULT 1           -- which client business this supplier belongs to
 );
 
 CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -61,6 +71,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     payout_destination TEXT,             -- masked, e.g. ra***@okhdfc or XXXXXX1234
     paid_at           TEXT,              -- when the payout was sent (for the daily limit)
     accepted_date     TEXT,              -- IST date the invoice was accepted; the MSME payment clock starts here
+    business_id       INTEGER NOT NULL DEFAULT 1,  -- which client business received it
     created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -102,10 +113,18 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+def _add_column_if_missing(conn, table: str, column: str, ddl: str) -> None:
+    if column not in {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+
 def init_db() -> None:
-    """Create tables if missing. Safe to run on every startup."""
+    """Create tables if missing. Safe to run on every startup. Also upgrades a database made before multi-business
+    support (every existing supplier and invoice becomes business 1)."""
     with connect() as conn:
         conn.executescript(SCHEMA)
+        for table in ("suppliers", "invoices"):
+            _add_column_if_missing(conn, table, "business_id", "INTEGER NOT NULL DEFAULT 1")
 
 
 def is_empty() -> bool:

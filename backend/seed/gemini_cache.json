@@ -846,5 +846,408 @@
    "signals": [],
    "reasons": []
   }
+ },
+ {
+  "file": "k1_coimbatore_cotton_valid.pdf",
+  "file_hash": "655f693db7e950374a19ab33ca9e0c8e330e20d5ae44ee3f63d4ac703f2117ac",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 10162.5,
+   "due_date": "2026-11-18",
+   "igst": null,
+   "invoice_date": "2026-11-03",
+   "invoice_number": "CCM/26-27/2210",
+   "line_items": [
+    {
+     "description": "Combed cotton yarn 40s (kg)",
+     "gst_rate": 5,
+     "hsn_sac": "5205",
+     "quantity": 1200,
+     "unit_price": 315.0
+    },
+    {
+     "description": "Cotton waste (kg)",
+     "gst_rate": 5,
+     "hsn_sac": "5202",
+     "quantity": 300,
+     "unit_price": 95.0
+    }
+   ],
+   "payee_account": "611200458831",
+   "payee_ifsc": "KVBL0001204",
+   "payee_upi": null,
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3001",
+   "sgst": 10162.5,
+   "supplier_gstin": "33AAACC4410M1Z0",
+   "supplier_name": "Coimbatore Cotton Mills Pvt Ltd",
+   "taxable_value": 406500.0,
+   "total": 426825.0
+  }
+ },
+ {
+  "file": "k1_coimbatore_cotton_valid.pdf",
+  "file_hash": "655f693db7e950374a19ab33ca9e0c8e330e20d5ae44ee3f63d4ac703f2117ac",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k2_surat_yarn_valid_igst.pdf",
+  "file_hash": "1568dac7dcbd1fba37421d4591778380099bcdd924dc26696872c0799b9902c2",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": null,
+   "due_date": "2026-11-19",
+   "igst": 20160.0,
+   "invoice_date": "2026-11-04",
+   "invoice_number": "SYT/1187",
+   "line_items": [
+    {
+     "description": "Polyester filament yarn 150D (kg)",
+     "gst_rate": 12,
+     "hsn_sac": "5402",
+     "quantity": 800,
+     "unit_price": 210.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "suratyarn@oksbi",
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3002",
+   "sgst": null,
+   "supplier_gstin": "24AAEPS3391R1Z0",
+   "supplier_name": "Surat Yarn Traders",
+   "taxable_value": 168000.0,
+   "total": 188160.0
+  }
+ },
+ {
+  "file": "k2_surat_yarn_valid_igst.pdf",
+  "file_hash": "1568dac7dcbd1fba37421d4591778380099bcdd924dc26696872c0799b9902c2",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.05,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k3_chennai_packaging_valid.pdf",
+  "file_hash": "45f3123f9667747fcf8468d247b5d6edfec670df4043e56d69bf0d6c5b148d66",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 1170.0,
+   "due_date": "2026-11-20",
+   "igst": null,
+   "invoice_date": "2026-11-05",
+   "invoice_number": "CPC/26-27/774",
+   "line_items": [
+    {
+     "description": "Woven polypropylene bags (per 100)",
+     "gst_rate": 12,
+     "hsn_sac": "6305",
+     "quantity": 50,
+     "unit_price": 180.0
+    },
+    {
+     "description": "Corrugated cartons (per 100)",
+     "gst_rate": 18,
+     "hsn_sac": "4819",
+     "quantity": 20,
+     "unit_price": 350.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "chennaipack@okicici",
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3003",
+   "sgst": 1170.0,
+   "supplier_gstin": "33AABCC7753D1ZY",
+   "supplier_name": "CHENNAI PACKAGING CO.",
+   "taxable_value": 16000.0,
+   "total": 18340.0
+  }
+ },
+ {
+  "file": "k3_chennai_packaging_valid.pdf",
+  "file_hash": "45f3123f9667747fcf8468d247b5d6edfec670df4043e56d69bf0d6c5b148d66",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.05,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k4_tirupur_wrong_tax_type.pdf",
+  "file_hash": "7d26cd17a0cddba93d0e662e4e450b6d4c0c01df4300804a0b53c0ce4fce5661",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": null,
+   "due_date": "2026-11-21",
+   "igst": 3000.0,
+   "invoice_date": "2026-11-06",
+   "invoice_number": "TDW/0912",
+   "line_items": [
+    {
+     "description": "Dyeing and finishing job work (kg)",
+     "gst_rate": 5.0,
+     "hsn_sac": "998821",
+     "quantity": 2500.0,
+     "unit_price": 24.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "tirupurdyeing@okaxis",
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3004",
+   "sgst": null,
+   "supplier_gstin": "33AAGFT6620K1Z3",
+   "supplier_name": "Tirupur Dyeing Works",
+   "taxable_value": 60000.0,
+   "total": 63000.0
+  }
+ },
+ {
+  "file": "k4_tirupur_wrong_tax_type.pdf",
+  "file_hash": "7d26cd17a0cddba93d0e662e4e450b6d4c0c01df4300804a0b53c0ce4fce5661",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k5_coimbatore_duplicate.pdf",
+  "file_hash": "41513bd2227b159955b3c0bd7363e239ba437648813e7dc72ae9d6000ea80e09",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 10162.5,
+   "due_date": "2026-11-18",
+   "igst": null,
+   "invoice_date": "2026-11-03",
+   "invoice_number": "CCM/26-27/2210",
+   "line_items": [
+    {
+     "description": "Combed cotton yarn 40s (kg)",
+     "gst_rate": 5,
+     "hsn_sac": "5205",
+     "quantity": 1200,
+     "unit_price": 315.0
+    },
+    {
+     "description": "Cotton waste (kg)",
+     "gst_rate": 5,
+     "hsn_sac": "5202",
+     "quantity": 300,
+     "unit_price": 95.0
+    }
+   ],
+   "payee_account": "611200458831",
+   "payee_ifsc": "KVBL0001204",
+   "payee_upi": null,
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3001",
+   "sgst": 10162.5,
+   "supplier_gstin": "33AAACC4410M1Z0",
+   "supplier_name": "Coimbatore Cotton Mills Pvt Ltd",
+   "taxable_value": 406500.0,
+   "total": 426825.0
+  }
+ },
+ {
+  "file": "k5_coimbatore_duplicate.pdf",
+  "file_hash": "41513bd2227b159955b3c0bd7363e239ba437648813e7dc72ae9d6000ea80e09",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.05,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k6_blr_logistics_changed_payee.pdf",
+  "file_hash": "b640e439d03ab834ca39d0648a6bdb1cda45a58e25d9fc888c7ba66c799fd678",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": null,
+   "due_date": "2026-11-21",
+   "igst": 7000.0,
+   "invoice_date": "2026-11-06",
+   "invoice_number": "BLH/55421",
+   "line_items": [
+    {
+     "description": "Freight Bengaluru to Coimbatore",
+     "gst_rate": 5.0,
+     "hsn_sac": "996511",
+     "quantity": 4.0,
+     "unit_price": 35000.0
+    }
+   ],
+   "payee_account": "918020077112299",
+   "payee_ifsc": "UTIB0004455",
+   "payee_upi": null,
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3005",
+   "sgst": null,
+   "supplier_gstin": "29AAHCB2284L1Z9",
+   "supplier_name": "Bengaluru Logistics Hub",
+   "taxable_value": 140000.0,
+   "total": 147000.0
+  }
+ },
+ {
+  "file": "k6_blr_logistics_changed_payee.pdf",
+  "file_hash": "b640e439d03ab834ca39d0648a6bdb1cda45a58e25d9fc888c7ba66c799fd678",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.8,
+   "signals": [
+    "new_payment_details"
+   ],
+   "reasons": [
+    "The invoice explicitly states that the bank account details have changed, which is a common indicator of payment fraud."
+   ]
+  }
+ },
+ {
+  "file": "k7_chennai_packaging_partial.pdf",
+  "file_hash": "737d3c61d86ae04a27b0d705ceaabcc22f3d5e316693beb717278d68e5906f56",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 324.0,
+   "due_date": "2026-11-22",
+   "igst": null,
+   "invoice_date": "2026-11-07",
+   "invoice_number": "CPC/26-27/790",
+   "line_items": [
+    {
+     "description": "Woven polypropylene bags (per 100)",
+     "gst_rate": 12.0,
+     "hsn_sac": "6305",
+     "quantity": 30.0,
+     "unit_price": 180.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "chennaipack@okicici",
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3006",
+   "sgst": 324.0,
+   "supplier_gstin": "33AABCC7753D1ZY",
+   "supplier_name": "Chennai Packaging Co.",
+   "taxable_value": 5400.0,
+   "total": 6048.0
+  }
+ },
+ {
+  "file": "k7_chennai_packaging_partial.pdf",
+  "file_hash": "737d3c61d86ae04a27b0d705ceaabcc22f3d5e316693beb717278d68e5906f56",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.1,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "sample_4_kaveri_valid.pdf",
+  "file_hash": "a84ee07d2fd29b84865386f555cfcd5796448a3f39bbc14656f73ab34157825e",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 4425.0,
+   "due_date": "2026-12-07",
+   "igst": null,
+   "invoice_date": "2026-11-22",
+   "invoice_number": "CCM/26-27/2299",
+   "line_items": [
+    {
+     "description": "Combed cotton yarn 30s (kg)",
+     "gst_rate": 5.0,
+     "hsn_sac": "5205",
+     "quantity": 600.0,
+     "unit_price": 295.0
+    }
+   ],
+   "payee_account": "611200458831",
+   "payee_ifsc": "KVBL0001204",
+   "payee_upi": null,
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3101",
+   "sgst": 4425.0,
+   "supplier_gstin": "33AAACC4410M1Z0",
+   "supplier_name": "Coimbatore Cotton Mills Pvt Ltd",
+   "taxable_value": 177000.0,
+   "total": 185850.0
+  }
+ },
+ {
+  "file": "sample_4_kaveri_valid.pdf",
+  "file_hash": "a84ee07d2fd29b84865386f555cfcd5796448a3f39bbc14656f73ab34157825e",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "k7_chennai_packaging_partial.pdf",
+  "file_hash": "ce6a2cec8dfdc381fabac4f0e0545026864326426bb8a886e8ef6b8f2969ba8e",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "33AABCK7712P1ZA",
+   "cgst": 3240.0,
+   "due_date": "2026-11-22",
+   "igst": null,
+   "invoice_date": "2026-11-07",
+   "invoice_number": "CPC/26-27/790",
+   "line_items": [
+    {
+     "description": "Woven polypropylene bags (per 100)",
+     "gst_rate": 12.0,
+     "hsn_sac": "6305",
+     "quantity": 300.0,
+     "unit_price": 180.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "chennaipack@okicici",
+   "place_of_supply": "33-Tamil Nadu",
+   "po_number": "PO-3006",
+   "sgst": 3240.0,
+   "supplier_gstin": "33AABCC7753D1ZY",
+   "supplier_name": "Chennai Packaging Co.",
+   "taxable_value": 54000.0,
+   "total": 60480.0
+  }
+ },
+ {
+  "file": "k7_chennai_packaging_partial.pdf",
+  "file_hash": "ce6a2cec8dfdc381fabac4f0e0545026864326426bb8a886e8ef6b8f2969ba8e",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
  }
 ]

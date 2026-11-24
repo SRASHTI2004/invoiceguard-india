@@ -2,7 +2,7 @@
 to the owner (copy, or open in their mail app) and the request is recorded in the audit log."""
 from urllib.parse import quote
 
-from . import audit, config, pipeline
+from . import audit, businesses, pipeline
 from .money import inr
 
 
@@ -26,6 +26,7 @@ def draft(conn, inv_id: int) -> dict:
     if not failed:
         raise pipeline.ActionError("This invoice has no GST problem to correct")
     supplier = conn.execute("SELECT * FROM suppliers WHERE id=?", (inv["supplier_id"],)).fetchone() if inv["supplier_id"] else None
+    business = businesses.get(conn, inv["business_id"])
     to = (supplier["email"] if supplier and supplier["email"] else "") or ""
     name = supplier["name"] if supplier else (inv["supplier_name"] or "supplier")
 
@@ -37,9 +38,9 @@ def draft(conn, inv_id: int) -> dict:
     lines += ["", "Please issue a corrected tax invoice (and, where the original was already reported, a credit note or "
               "amendment for it) so that we can claim input tax credit on the correct amount. Please quote the original "
               "invoice number on the corrected one.", "",
-              f"Our details for the corrected invoice: {config.BUYER_NAME}, GSTIN {config.BUYER_GSTIN}.", "",
+              f"Our details for the corrected invoice: {business['name']}, GSTIN {business['gstin']}.", "",
               "We will release payment promptly once the corrected invoice is received.", "",
-              "Regards,", f"Accounts Payable, {config.BUYER_NAME}"]
+              "Regards,", f"Accounts Payable, {business['name']}"]
     subject = f"Request for corrected tax invoice: {inv['invoice_number']} ({_date(inv['invoice_date'])})"
     body = "\n".join(lines)
     issues = "; ".join(f["label"] for f in failed)

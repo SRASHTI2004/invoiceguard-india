@@ -32,8 +32,8 @@ _SAVED_FIELDS = ("supplier_name", "supplier_gstin", "buyer_gstin", "place_of_sup
                  "total_paise", "payee_upi", "payee_account", "payee_ifsc")
 
 
-def _save_extraction(conn, inv_id: int, inv: dict) -> None:
-    supplier = checks.get_supplier(conn, inv["supplier_name"]) if inv.get("supplier_name") else None
+def _save_extraction(conn, inv_id: int, inv: dict, business_id: int = 1) -> None:
+    supplier = checks.get_supplier(conn, inv["supplier_name"], business_id) if inv.get("supplier_name") else None
     sets = ", ".join(f"{f}=?" for f in _SAVED_FIELDS)
     conn.execute(f"UPDATE invoices SET supplier_id=?, line_items=?, {sets} WHERE id=?",
                  (supplier["id"] if supplier else None, json.dumps(inv["line_items"]),
@@ -41,11 +41,12 @@ def _save_extraction(conn, inv_id: int, inv: dict) -> None:
     conn.commit()
 
 
-def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None, accepted_date: str | None = None) -> dict:
+def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None, accepted_date: str | None = None,
+                    business_id: int = 1) -> dict:
     """Run one uploaded invoice through the whole firewall and return the saved invoice.
     accepted_date (IST, YYYY-MM-DD) is when we accepted it: the MSME payment clock starts there. Default: today."""
-    cur = conn.execute("INSERT INTO invoices (filename, file_hash, status, accepted_date) VALUES (?, ?, 'RECEIVED', ?)",
-                       (filename, gemini.pdf_hash(pdf_bytes), accepted_date or timeutil.today_ist().isoformat()))
+    cur = conn.execute("INSERT INTO invoices (filename, file_hash, status, accepted_date, business_id) VALUES (?, ?, 'RECEIVED', ?, ?)",
+                       (filename, gemini.pdf_hash(pdf_bytes), accepted_date or timeutil.today_ist().isoformat(), business_id))
     conn.commit()
     inv_id = cur.lastrowid
     audit.log(conn, inv_id, "received", details={"filename": filename})
@@ -53,8 +54,8 @@ def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None, a
     inv = None
     try:
         inv = extract.extract_invoice(pdf_bytes, conn, gemini_client)
-        _save_extraction(conn, inv_id, inv)
-        findings, report = checks.run_checks_with_report(conn, inv, exclude_id=inv_id)
+        _save_extraction(conn, inv_id, inv, business_id)
+        findings, report = checks.run_checks_with_report(conn, inv, exclude_id=inv_id, business_id=business_id)
         conn.execute("UPDATE invoices SET gst_report=? WHERE id=?",
                      (json.dumps([r.as_dict() for r in report]), inv_id))
         conn.commit()
@@ -135,7 +136,7 @@ def gst_failures(conn, inv: dict) -> list[dict]:
     """Fresh GST check at this moment: the failed results (empty = no GST problem)."""
     if not inv["supplier_name"] or inv["total_paise"] is None:
         return []
-    _, report = checks.run_checks_with_report(conn, _check_input(inv), exclude_id=inv["id"])
+    _, report = checks.run_checks_with_report(conn, _check_input(inv), exclude_id=inv["id"], business_id=inv["business_id"])
     return [r.as_dict() for r in report if not r.ok]
 
 
@@ -174,7 +175,7 @@ def hard_blockers(conn, inv: dict) -> list[str]:
     """Fresh deterministic re-check: messages of any BLOCK-level finding (duplicate, PO, payee email, supplier)."""
     if not inv["supplier_name"] or inv["total_paise"] is None:
         return []  # unreadable invoice: pay_invoice refuses it
-    fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"])
+    fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"], business_id=inv["business_id"])
     return [f.message for f in fresh if f.severity == checks.BLOCK]
 
 
@@ -216,13 +217,13 @@ def reset_demo_data(conn) -> None:
     conn.commit()
 
 
-def itc_summary(conn) -> dict:
+def itc_summary(conn, business_id: int = 1) -> dict:
     """Input tax credit (ITC) at stake. 'Protected' = the GST amount on blocked or rejected invoices that failed a GST
     check (invalid GSTIN, wrong tax type or arithmetic): paying them would have put the buyer's ITC at risk.
     'At risk' = the same for invoices still on hold, until a person decides."""
     out = {"itc_protected_paise": 0, "itc_protected_count": 0, "itc_at_risk_paise": 0, "itc_at_risk_count": 0}
     for r in conn.execute("SELECT status, cgst_paise, sgst_paise, igst_paise, gst_report FROM invoices "
-                          "WHERE status IN ('BLOCKED','REJECTED','HELD') AND gst_report IS NOT NULL"):
+                          "WHERE status IN ('BLOCKED','REJECTED','HELD') AND gst_report IS NOT NULL AND business_id = ?", (business_id,)):
         if not any(not c["ok"] for c in json.loads(r["gst_report"])):
             continue
         gst = (r["cgst_paise"] or 0) + (r["sgst_paise"] or 0) + (r["igst_paise"] or 0)
@@ -232,10 +233,12 @@ def itc_summary(conn) -> dict:
     return out
 
 
-def summary(conn) -> dict:
+def summary(conn, business_id: int = 1) -> dict:
     def total(where):
-        return conn.execute(f"SELECT COALESCE(SUM(total_paise),0) FROM invoices WHERE {where}").fetchone()[0]
-    counts = {r["status"]: r["n"] for r in conn.execute("SELECT status, COUNT(*) n FROM invoices GROUP BY status")}
+        return conn.execute(f"SELECT COALESCE(SUM(total_paise),0) FROM invoices WHERE business_id = ? AND {where}",
+                            (business_id,)).fetchone()[0]
+    counts = {r["status"]: r["n"] for r in conn.execute(
+        "SELECT status, COUNT(*) n FROM invoices WHERE business_id = ? GROUP BY status", (business_id,))}
     return {
         "total_paid_paise": total("status='PAID'"),
         "total_blocked_paise": total("status='BLOCKED'"),
@@ -243,7 +246,7 @@ def summary(conn) -> dict:
         "money_saved_paise": total("status IN ('BLOCKED','REJECTED')"),
         "counts": counts,
         "invoice_count": sum(counts.values()),
-        **itc_summary(conn),
+        **itc_summary(conn, business_id),
     }
 
 
@@ -259,7 +262,7 @@ def proposal_refusals(conn, inv: dict) -> list[str]:
         return [f"Invoice is {inv['status']}; only invoices on hold can be proposed"]
     if not inv["supplier_name"] or inv["total_paise"] is None:
         return ["Invoice could not be read properly; the owner must review it"]
-    fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"])
+    fresh = checks.run_checks(conn, _check_input(inv), exclude_id=inv["id"], business_id=inv["business_id"])
     out = [f.message for f in fresh if f.code not in AGENT_ALLOWED_FINDINGS]
     if inv["risk_score"] is None or inv["risk_score"] >= decide.AI_HOLD_RISK:
         out.append("AI review risk is missing or not low; the owner must review this one")
