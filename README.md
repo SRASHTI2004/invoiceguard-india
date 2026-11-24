@@ -20,6 +20,8 @@ Light theme by default (with a dark mode), desktop at 1440px and phone at 390px.
 | ![Sample invoices to download](docs/screenshots/desktop-16-sample-menu.png) **Download a sample invoice** and upload it yourself | ![AP Agent](docs/screenshots/desktop-11-agent-proposal.png) **AP Agent**: instant answer, tools used, proposal with Confirm |
 | ![Prompt injection blocked](docs/screenshots/desktop-06-drawer-injection.png) **Hidden prompt injection** stopped at the AI review | ![Suppliers](docs/screenshots/desktop-08-suppliers.png) **Suppliers**: saved GSTIN, payout details, MSME class |
 | ![Audit log](docs/screenshots/desktop-09-audit.png) **Audit log** (IST) | ![Dark mode](docs/screenshots/desktop-12-dark-dashboard.png) **Dark mode** |
+| ![Second client business](docs/screenshots/desktop-31-dashboard-kaveri.png) **Client switcher** for CA firms: Kaveri Textiles has its own GSTIN, suppliers, invoices and numbers | ![Kaveri approvals](docs/screenshots/desktop-32-approvals-kaveri.png) **Kaveri approvals**: its own MSME timers, including an overdue one |
+| ![How well it works](docs/screenshots/desktop-35-evaluation.png) **How well it works**: the evaluation on the labelled invoices, and which check caught each case | |
 
 On a phone the sidebar becomes a bottom tab bar and the table becomes cards:
 
@@ -35,6 +37,8 @@ On a phone the sidebar becomes a bottom tab bar and the table becomes cards:
   <img src="docs/screenshots/mobile-17-drawer-msme.png" width="170" alt="Mobile MSME timer">
   <img src="docs/screenshots/mobile-11-agent-proposal.png" width="170" alt="Mobile AP agent">
   <img src="docs/screenshots/mobile-12-dark-dashboard.png" width="170" alt="Mobile dark mode">
+  <img src="docs/screenshots/mobile-31-dashboard-kaveri.png" width="170" alt="Mobile second client business">
+  <img src="docs/screenshots/mobile-35-evaluation.png" width="170" alt="Mobile evaluation page">
 </p>
 
 ## The problem

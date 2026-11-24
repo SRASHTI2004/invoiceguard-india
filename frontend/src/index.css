@@ -406,8 +406,9 @@ table.tbl { width: 100%; border-collapse: collapse; }
 @media (max-width: 719px) { .eval-tbl td.c-date { display: block; } .eval-tbl tr { grid-template-columns: 1fr auto; } .eval-tbl td.c-gst { grid-column: 1 / -1; text-align: left; } .eval-tbl td.c-status { grid-column: 1; } .eval-tbl td.c-date { grid-column: 2; grid-row: 2; text-align: right; } }
 
 /* ---- client-business switcher (CA firms) ---- */
-.biz-pick { position: relative; display: inline-flex; align-items: center; max-width: 100%; }
-.biz-pick select { appearance: none; -webkit-appearance: none; font: inherit; font-weight: 700; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 4px 28px 4px 28px; min-height: 36px; max-width: 100%; text-overflow: ellipsis; cursor: pointer; margin-left: -8px; }
+.biz { flex: 1; }
+.biz-pick { position: relative; display: flex; align-items: center; width: 100%; max-width: 420px; }
+.biz-pick select { appearance: none; -webkit-appearance: none; font: inherit; font-weight: 700; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 4px 28px 4px 28px; min-height: 36px; width: 100%; text-overflow: ellipsis; cursor: pointer; margin-left: -8px; }
 .biz-pick select:hover { background: var(--surface-2); border-color: var(--border-strong); }
 .biz-pick select:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 60%, transparent); outline-offset: 1px; }
 .biz-ico { position: absolute; left: 0; pointer-events: none; color: var(--brand); }
