@@ -1,7 +1,7 @@
 import { AlertCircle, CheckCircle2, CircleDot, ScrollText, XCircle, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, AuditRow, Invoice } from "../api";
-import { hrefFor } from "../lib";
+import { fmtDateTime, hrefFor } from "../lib";
 import { EmptyState, ErrorState, Skeleton, StatusBadge } from "../ui";
 
 const TONE: Record<string, [string, LucideIcon]> = {
@@ -36,7 +36,7 @@ export default function AuditPage({ invoices }: { invoices: Invoice[] }) {
                       <strong>{r.event.replace(/_/g, " ")}</strong>
                       <StatusBadge status={r.decision} size="sm" />
                       {r.invoice_id != null && <a className="linkbtn" href={hrefFor("invoices", r.invoice_id)}>Invoice #{r.invoice_id}</a>}
-                      <time className="feed-time">{r.created_at} UTC</time>
+                      <time className="feed-time">{fmtDateTime(r.created_at)}</time>
                     </div>
                     {r.reason && <div className="feed-reason">{r.reason}</div>}
                   </div>

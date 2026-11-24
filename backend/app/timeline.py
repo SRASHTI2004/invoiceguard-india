@@ -3,7 +3,7 @@ plain-English reason. Built from what the pipeline already stored (the invoice r
 recomputed, so it shows what actually happened."""
 import json
 
-from . import checks, decide, payouts, pipeline
+from . import checks, decide, payouts, pipeline, timeutil
 
 _READ_CODES = {"missing_fields", "no_line_items", "bad_line_items", "extraction_failed"}
 
@@ -87,7 +87,7 @@ def build(conn, inv_id: int) -> dict | None:
         decision = _step("decision", "Decision", state, label)  # the reason is shown in the step that caused it
         for e in events:
             if e["event"] in ("owner_approved", "owner_rejected", "approval_refused"):
-                decision["details"].append(f"{e['created_at']} UTC: {e['reason']}")
+                decision["details"].append(f"{timeutil.to_ist(e['created_at'])}: {e['reason']}")
     else:
         decision = _step("decision", "Decision", "pending", "Not decided yet")
 

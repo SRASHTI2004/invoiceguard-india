@@ -62,6 +62,15 @@ export const fmtDate = (iso: string | null | undefined) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 };
 
+/** SQLite timestamps are UTC ("2026-11-24 11:43:22"). Show them in IST: "24 Nov 2026, 5:13 pm IST". */
+export const fmtDateTime = (utc: string | null | undefined) => {
+  if (!utc) return "";
+  const d = new Date(utc.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return utc;
+  const s = d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+  return `${s.replace(/am/i, "am").replace(/pm/i, "pm")} IST`;
+};
+
 /* ---- small helpers ----------------------------------------------------------------------------------------------- */
 export const failedChecks = (inv: { gst_report?: { ok: boolean }[] }) => (inv.gst_report ?? []).filter((c) => !c.ok).length;
 

@@ -8,7 +8,7 @@ Each check returns a list of Findings. BLOCK = looks like fraud, HOLD = needs a 
 import sqlite3
 from dataclasses import dataclass
 
-from . import config, gst
+from . import config, gst, timeutil
 from .money import inr
 
 BLOCK = "BLOCK"
@@ -114,10 +114,11 @@ def check_payee(supplier, inv: dict) -> list[Finding]:
 
 
 def paid_today_paise(conn, today: str | None = None) -> int:
-    day = today or "now"
+    """Total paid on the given IST calendar day (default: today in India). paid_at is stored in UTC."""
+    day = today or timeutil.today_ist().isoformat()
     row = conn.execute(
-        "SELECT COALESCE(SUM(total_paise), 0) FROM invoices WHERE status = 'PAID' AND date(paid_at) = date(?)",
-        (day,)).fetchone()
+        "SELECT COALESCE(SUM(total_paise), 0) FROM invoices WHERE status = 'PAID' "
+        "AND date(paid_at, '+330 minutes') = ?", (day,)).fetchone()
     return row[0]
 
 
