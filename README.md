@@ -1,7 +1,7 @@
 # InvoiceGuard India
 
 **An AI accounts-payable agent for Indian businesses that stops fake and wrong GST invoices before any money moves.**
-Prototype for Prasunex Innovathon, Round 3. Built from the original InvoiceGuard project and adapted to GST, INR, UPI/bank payouts, input tax credit and the MSME 43B(h) payment rule.
+Prototype for Prasunex Innovathon, Round 3. Built from the original InvoiceGuard project and adapted to GST, INR, UPI/bank payouts, input tax credit, the MSME 43B(h) payment rule, and CA firms that manage several client businesses.
 
 > **Payouts are a simulated sandbox.** No real money moves and no bank or UPI network is contacted. The dashboard labels every payout "SIMULATED SANDBOX". All suppliers, GSTINs, bank accounts and UPI IDs in the demo are fictional. The MSME timer is guidance, not tax advice.
 
@@ -59,6 +59,9 @@ Upload an invoice PDF. InvoiceGuard India reads it with Gemini, runs it through 
 - **Payouts** to the supplier's *saved* UPI ID or bank account, by UPI, IMPS or RTGS depending on the amount. Idempotent, with HOLD-on-failure.
 - **AP agent with propose-then-confirm**: ask in plain English; the agent can only recommend, you confirm with a click, and every check is re-run at that moment. The three suggested prompts answer **instantly** (see below).
 - **Try it yourself**: a **Download a sample invoice** menu next to Upload gives three realistic PDFs (two valid, one with a GST problem) to upload.
+- **For CA firms: several client businesses in one login.** A switcher in the top bar changes between client businesses (the demo has **Bluebird Retail**, Bengaluru, and **Kaveri Textiles**, Coimbatore). Each has its own GSTIN, suppliers, purchase orders, invoices, audit log, ITC, MSME timers, export and agent view; invoices are checked against that business's own GSTIN, and nothing is visible across businesses (this is tested).
+- **Tally-friendly export**: **Export for Tally (CSV)** downloads the current business's paid invoices with the columns an accountant needs: Date, Supplier, Supplier GSTIN, Invoice No, Taxable Value, CGST, SGST, IGST, Total, Payment Reference. Dates are DD-MM-YYYY, amounts are plain rupees, the supplier name and GSTIN are the saved, verified ones, and spreadsheet-formula injection is neutralised.
+- **How well it works**: an in-app page shows the evaluation on the labelled invoices (cases, fraud and errors caught, valid invoices wrongly held, and **which check caught each one**). It is generated from the real eval run (`python -m eval.run_eval --write`) and a test fails if it ever differs from a fresh run.
 - **A fintech-style dashboard**: landing page, sidebar (bottom tab bar on phones), KPI cards, chart, invoice table with search and filters, an **invoice drawer** with a six-step journey (Read, GST checks, Rule checks, AI review, Decision, Payout), light and dark themes, keyboard and screen-reader friendly. Deep links like `/#/invoices/8` open an invoice directly.
 
 ## How the GST checks work
@@ -113,6 +116,48 @@ The agent (`agent.py`) has three tools (list invoices, run checks, propose payme
 
 A real provider (for example RazorpayX Payouts or a bank API) would implement the same two functions and be selected with `PAYOUT_PROVIDER`; the pipeline would not change. That integration is not built or tested here.
 
+## Architecture and scaling
+
+**Today (the prototype).** One FastAPI process and one SQLite file. An upload is processed inside the request: read the PDF with Gemini, run the GST and fraud checks in code, review for scams with Gemini, decide, and (if safe) pay through the simulated payout adapter. It is deliberately simple so the whole decision path can be read and tested end to end (201 tests). Everything that matters for correctness is already in place: integer paise, idempotent payouts, every decision in an audit log, `business_id` on every supplier and invoice, and one pure decision function.
+
+**How it grows.** None of the steps below changes the rules or the pipeline's order; they change where things run and who can see what.
+
+| Concern | Today | In production |
+|---|---|---|
+| Database | SQLite file, re-seeded on every start on the free host | **PostgreSQL** (managed, backed up, point-in-time recovery). Schema migrations with Alembic instead of the small in-code upgrade. Indexes on `(business_id, status)` and `(supplier_id, invoice_number)`; unique constraints for PO numbers and payout references; `business_id` added to every table (purchase orders, audit log, payouts), not only suppliers and invoices. |
+| Invoice processing | Synchronous inside the upload request | **Job queue** (for example Redis with RQ or Celery, or a cloud task queue). Upload stores the PDF in object storage and returns at once; a worker runs read, checks, AI review and decision. Idempotent on the file hash, retries with back-off, and a dead-letter path that ends in HOLD (never auto-pay on a failure, as today). The UI is told by push (SSE or webhook) instead of waiting. |
+| Payments | Simulated sandbox adapter | A licensed payout partner behind the same adapter, run by a **separate payout worker** using an outbox table and the existing idempotency reference; webhooks and UTR reconciliation; **maker-checker** (two people) above a limit. The business's money stays with the licensed partner, not with us. |
+| Per-business isolation | Every query is scoped by business id in application code, and a test suite proves other businesses' invoices, suppliers, audit rows, exports and agent views are invisible | Real authentication with a user-to-business membership table and roles (owner, accountant, CA). Tokens carry the allowed business ids. PostgreSQL **row-level security** keyed on the current business, so a missing filter in code cannot leak data. Bank details encrypted per business (KMS envelope keys). Object-store prefix and payout wallet per business. |
+| Rate limits and cost | 10 MB PDF cap; Gemini failure falls back to HOLD | Per-user and per-business token-bucket limits at the gateway (uploads, agent calls), page-count cap, malware scan on upload, a Gemini circuit breaker and a monthly AI-spend cap per business. |
+| Audit log retention | Plain table | **Append-only** (the application role has no UPDATE or DELETE on it), partitioned by month, optionally hash-chained so tampering is detectable. Keep for at least the statutory period for tax records and make it configurable per client (we would default to 8 years and confirm the exact period with the CA); older partitions move to cold storage and can be exported on request. Personal data minimised, and a documented policy for what is sent to the AI model. |
+| Operations | Health endpoint, logs without secrets | Structured logs and metrics per business, tracing across API, queue and workers, alerts on queue age, failed payouts and AI errors; containers behind a load balancer with rolling deploys. |
+
+**Why this order of work.** PostgreSQL and the queue first (they remove the two prototype limits: one writer, and processing tied to a web request). Then authentication with row-level security (the point at which a second real firm can safely be added). Then the real payout partner and maker-checker (the point at which money is real).
+
+## Practical rollout
+
+**Who pays.** The natural buyer is the **CA or accounting firm**, because it already serves many small businesses and carries the risk when an invoice is wrong. The small business gets the benefit (fewer errors, protected input tax credit, on-time MSME payments) without a new job. A direct plan for a single business stays available.
+
+**Pricing idea (illustrative, to be validated in a pilot).**
+
+| Plan | Who | Idea |
+|---|---|---|
+| Business | One small business | A flat monthly fee for up to about 50 invoices, then a small per-invoice charge |
+| CA firm | A firm with 10 or more clients | A per-client monthly fee that falls with the number of clients, one login, one switcher, white-label option |
+| Pass-through | Everyone | Payout-partner charges passed through at cost |
+
+The value to compare against: the GST and fraud losses avoided (the dashboard's **ITC protected** and **Money saved** cards), the hours of manual checking, and avoided 43B(h) disallowances. The cost side to measure in the pilot is the Gemini cost per invoice (two model calls today, none for cached demo files). No prices have been tested with real customers.
+
+**How a CA firm would onboard clients.**
+1. **Set up the firm.** The CA creates the firm account and adds each client business with its GSTIN, checked against the public GST search, with the client's written consent.
+2. **Load the master data.** Import suppliers, GSTINs and payment details from the client's Tally or Excel file. Verify each bank account or UPI ID once (a small test transfer) before it can be paid. Flag MSME suppliers and record whether there is a written agreement.
+3. **Set the guard rails.** Per-payment and daily limits, who may approve, and which invoices may ever auto-pay.
+4. **Shadow mode for 2 to 4 weeks.** Clients forward or upload invoices; InvoiceGuard only checks and recommends, and the CA compares its verdicts with their own review. The result of that comparison is the real accuracy number (the 7/7 and 0/5 here are a small hand-built set).
+5. **Go live carefully.** Auto-pay only for valid invoices under the limit from verified suppliers; everything else lands in Approvals; the CA reviews held items for all clients from one switcher.
+6. **Month end.** Export paid invoices to Tally (built), review ITC protected and the MSME timers, and keep the audit trail for the client.
+
+**What a real deployment still needs** (not built here): real authentication and roles, a licensed payout partner, live GSTIN verification, e-invoice (IRN) checks, an inbox per business for forwarded invoices, and a data-protection review under India's DPDP Act. The tax outputs (ITC and MSME timer) are guidance, not tax advice.
+
 ## Run it
 
 Needs Python 3.12 and Node 20.
@@ -131,19 +176,19 @@ npm run dev                         # http://localhost:5173
 # or: npm run build                 # then open http://localhost:8000
 ```
 
-Without a `GEMINI_API_KEY`, the 13 demo invoices, the 3 downloadable samples and the three agent chips all work, because their Gemini results are cached (real Gemini output). **Uploading your own new PDF, or asking the agent something else, needs a key.**
+Without a `GEMINI_API_KEY`, the 20 demo invoices (both client businesses), the 4 downloadable samples and the agent chips all work, because their Gemini results are cached (real Gemini output). **Uploading your own new PDF, or asking the agent something else, needs a key.**
 
 **Deploy**: `render.yaml` defines a Docker web service named `invoiceguard-india` (separate from the original). The free plan has no persistent disk, so SQLite is re-created and re-seeded on every start.
 
 ## Demo steps
 
-See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 3-minute flow. In short: click **Try with demo data**; read the cards (including ITC protected); open the failing invoices and read the red GST line; ask a supplier for a corrected invoice; approve one with a reason; watch the MSME timers on Approvals; ask the AP agent to pay the Cedar & Pine invoice and confirm; or download a sample invoice and upload it yourself.
+See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 3-minute flow. In short: click **Try with demo data** (it loads both client businesses); switch client from the top bar; read the cards (including ITC protected); open the failing invoices and read the red GST line; ask a supplier for a corrected invoice; approve one with a reason; watch the MSME timers on Approvals; ask the AP agent to pay the Cedar & Pine invoice and confirm; export paid invoices for Tally; open **How well it works**; or download a sample invoice and upload it yourself.
 
 ## Tests and evaluation
 
 ```bash
 cd backend
-python -m pytest                    # 174 tests: GST, checks, payouts, pipeline, timeline, MSME, agent and its cache, samples, IST
+python -m pytest                    # 201 tests: GST, checks, payouts, pipeline, timeline, MSME, agent and its cache, samples, IST, multi-business isolation, export, eval page
 python -m eval.run_eval             # uses the cached Gemini results; add --live-gemini to call Gemini
 ```
 
@@ -164,9 +209,10 @@ A browser-level check of the live site is recorded in [FINAL_REPORT.md](FINAL_RE
 ```
 backend/app/   gst.py (GST rules)  checks.py (fraud rules)  decide.py  extract.py  ai_review.py  payouts.py
                pipeline.py  timeline.py  corrections.py  msme.py  agent.py  routes.py  money.py  timeutil.py
+               businesses.py (client businesses)  exports.py (Tally CSV)
 backend/seed/  data.py (fictional suppliers and invoices)  make_pdfs.py  gemini_cache.json  agent_cache.json
-               invoices/ (13 demo PDFs)  upload_samples/ (3 downloadable PDFs)
-backend/eval/  run_eval.py        backend/tests/
+               invoices/ (20 demo PDFs, two businesses)  upload_samples/ (4 downloadable PDFs)
+backend/eval/  run_eval.py  results.json (shown in the app)        backend/tests/
 frontend/      React + TypeScript dashboard (Vite, lucide icons, Inter font; no UI framework)
 docs/          screenshots used in this README
 ```

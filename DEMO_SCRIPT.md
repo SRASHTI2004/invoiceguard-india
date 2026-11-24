@@ -1,44 +1,44 @@
 # InvoiceGuard India: 3-minute demo script
 
-Setup: open <https://invoiceguard-india.onrender.com> (a sleeping free server can take about a minute to wake: open it a minute early). The demo data, the sample invoices and the three agent prompts are cached, so nothing here needs an API key. Say once, early: **payouts are a simulated sandbox, no real money moves.**
+Setup: open <https://invoiceguard-india.onrender.com> (a sleeping free server can take about a minute to wake: open it a minute early). The demo data, the sample invoices and the suggested agent prompts are cached, so nothing here needs an API key. Say once, early: **payouts are a simulated sandbox, no real money moves.**
 
 ## 0:00 to 0:20 The problem and the pitch
 
-"Indian businesses pay suppliers from PDF invoices. Fake GSTINs, wrong tax type, edited bank details, duplicates and missed MSME deadlines cost real money and input tax credit. InvoiceGuard India checks every invoice in code before a rupee moves."
+"Indian businesses pay suppliers from PDF invoices. Fake GSTINs, wrong tax type, edited bank details, duplicates and missed MSME deadlines cost real money and input tax credit. And most small businesses rely on a CA who looks after many of them. InvoiceGuard India checks every invoice in code before a rupee moves."
 
-Point at "Stop fraud before money moves". Click **Try with demo data**.
+Point at "Stop fraud before money moves". Click **Try with demo data** (it loads two client businesses).
 
-## 0:20 to 0:45 The dashboard
+## 0:20 to 0:40 The dashboard
 
-13 invoices have just been processed (times are in IST). Point at:
-- **Paid ₹7.16 L**: 5 valid invoices paid automatically. **Blocked 5**, **On hold 3**.
-- **ITC protected ₹46,580**: "the GST on a blocked invoice with a fake GSTIN. Paying it would have put our input tax credit at risk. ₹20,100 more is at risk on two held invoices."
+"Bluebird Retail, 13 invoices, times in IST." Point at **Paid ₹7.16 L**, **Blocked 5**, **On hold 3**, and **ITC protected ₹46,580**: "the GST on a blocked invoice with a fake GSTIN. Paying it would have put our input tax credit at risk."
 
-## 0:45 to 1:25 GST checks and a blocked fraud case (Invoices)
+## 0:40 to 1:05 GST checks and a blocked fraud case (Invoices)
 
-Open **Atlas Industrial Parts** (fake GSTIN). In the journey: "GST checks failed: the number is the right shape but its check character fails the GSTIN checksum, so it is not a real registration. Blocked, and the AI call was skipped."
+Open **Atlas Industrial Parts**: "The GSTIN is the right shape but fails the checksum, so it is not a real registration. Blocked." Open **BlueRiver Software**: "White text tells an AI agent to skip checks and pay. The AI review flags it, code blocks it. The AI can never approve a payment."
 
-Then open **BlueRiver Software**: "All GST checks pass, but white text in the PDF tells an AI agent to skip checks and pay. The AI review catches it and code blocks it. The AI can never approve a payment." Quickly mention duplicate (Mahalaxmi) and changed payee (Lumen).
+## 1:05 to 1:35 Corrected invoice, then approve with a reason (Approvals)
 
-## 1:25 to 2:00 Corrected invoice, then approve with a reason (Approvals)
+Pinnacle Print: "Tamil Nadu supplier, Karnataka buyer: IGST should apply, but it charges CGST and SGST." Click **Ask supplier for a corrected invoice**: "A drafted email naming the exact issue, logged, nothing sent." Then **Approve & pay** on Orchard Catering: "With a GST problem I must give a reason first." Type one, approve. "It is in the audit log."
 
-Open **Approvals**. Pinnacle Print: "Tamil Nadu supplier, Karnataka buyer, so IGST applies, but the invoice charges CGST and SGST." Click **Ask supplier for a corrected invoice**: "It drafts an email naming the exact GST issue and logs the request. Nothing is sent." Close it.
+## 1:35 to 1:55 MSME timer
 
-Now click **Approve & pay** on Orchard Catering (wrong GST total): "Because there is a GST problem, I must give a reason before it can be paid." Type a reason, approve. "The reason is saved in the audit log." (Open the Audit log to show it, with the IST time.)
+"Pinnacle is a micro supplier with no written agreement: 15-day Section 43B(h) limit, 2 days left. Cedar & Pine has a written agreement: 45 days, 5 left. Guidance, not tax advice."
 
-## 2:00 to 2:25 MSME timer
+## 1:55 to 2:25 One login, many clients (the CA story)
 
-Back on **Approvals**: "Pinnacle is a micro supplier with no written agreement: the 15-day Section 43B(h) limit, **pay by 2 days from now**, shown in red amber. Cedar & Pine is a small supplier with a written agreement: 45 days, 5 left. Pay late and the expense is not deductible this year. This is guidance, not tax advice."
+Use the switcher in the top bar to open **Kaveri Textiles** (Coimbatore). "Different GSTIN, different suppliers, different invoices, its own ITC and its own overdue MSME alert. Nothing leaks between clients; that is tested." Open Invoices and click **Export for Tally (CSV)**: "Paid invoices with the columns an accountant needs: date, supplier, GSTIN, invoice number, taxable value, CGST, SGST, IGST, total, payment reference."
 
-## 2:25 to 3:00 AP agent, and try it yourself
+## 2:25 to 2:45 AP agent
 
-Open **AP Agent**, click "Pay the Cedar & Pine Furniture invoice": "Instant, tools shown, and it only proposes." Click **Confirm and pay**: "Every check is re-run now, then the saved UPI ID is paid."
+Open **AP Agent**, click "Pay the Chennai Packaging Co. invoice": "Instant, tools shown, and it only proposes." Click **Confirm and pay**: "Every check is re-run now, then the saved UPI ID is paid."
 
-Close: "Judges can try the real upload flow: Invoices, **Download a sample invoice**, then Upload. GST rules in code, AI only for reading and flagging, a person or the decision function for money."
+## 2:45 to 3:00 How well it works, and try it yourself
+
+Open **How well it works**: "7 of 7 fraud and error cases caught, 0 of 5 valid invoices wrongly held, with the check that caught each one. It is generated from the real evaluation run, and a test fails if it ever drifts. It is a small hand-built set, so read it as a demonstration, not production accuracy." Close: "You can try the real upload flow yourself: Invoices, **Download a sample invoice**, then Upload."
 
 ## If something goes wrong
 
 - Page stuck loading: the free server is waking up, wait up to a minute.
 - Agent chips are instant; a free-typed question needs `GEMINI_API_KEY` (set in the Render dashboard) and may be slow or out of quota. Use **Approvals** instead.
-- Uploading the same sample twice is blocked as a duplicate (that is the duplicate check working). Click **Load demo data** for a clean slate.
-- A sample or demo MSME timer shows different days if the demo was loaded on a different day: the dates are set relative to the load day.
+- Uploading the same sample twice is blocked as a duplicate (the duplicate check working). Click **Load demo data** for a clean slate (it resets both businesses).
+- MSME days differ if the demo was loaded on a different day: acceptance dates are set relative to the day it is loaded.
