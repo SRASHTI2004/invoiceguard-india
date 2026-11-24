@@ -1,6 +1,6 @@
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useApprovalActions } from "./actions";
+import { CorrectionButton, useApprovalActions, useCorrectionAction } from "./actions";
 import { fmtDate } from "./lib";
 import { api, inr, Invoice, TimelineStep } from "./api";
 import { CloseButton, ErrorState, GstBadge, Overlay, Skeleton, Spinner, StatusBadge, StepIcon, useToast } from "./ui";
@@ -65,6 +65,7 @@ function GstBreakdown({ inv }: { inv: Invoice }) {
 export default function InvoiceDrawer({ invoice, onClose, reload }: { invoice: Invoice; onClose: () => void; reload: () => Promise<void> }) {
   const toast = useToast();
   const { ask, dialog, busyId } = useApprovalActions(reload);
+  const correction = useCorrectionAction(reload);
   const [refreshing, setRefreshing] = useState(false);
   const refresh = async () => {
     setRefreshing(true);
@@ -125,10 +126,12 @@ export default function InvoiceDrawer({ invoice, onClose, reload }: { invoice: I
         <div className="drawer-foot">
           <button className="btn btn-primary" disabled={busyId === invoice.id} onClick={() => ask(invoice, "approve")}>Approve &amp; pay</button>
           <button className="btn btn-danger" disabled={busyId === invoice.id} onClick={() => ask(invoice, "reject")}>Reject</button>
+          <CorrectionButton inv={invoice} action={correction} />
         </div>
       )}
     </Overlay>
     {dialog}
+    {correction.dialog}
     </>
   );
 }

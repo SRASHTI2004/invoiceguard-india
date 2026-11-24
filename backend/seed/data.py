@@ -8,40 +8,40 @@ from app.gst import expected_tax_paise, make_gstin, state_code_of
 BUYER = {"name": "Bluebird Retail Pvt Ltd", "address": "14 Indiranagar 100 Feet Road, Bengaluru, Karnataka 560038",
          "gstin": make_gstin("29", "AABCB5521M"), "place_of_supply": "29-Karnataka"}
 
-# key: (name, state code, PAN, approved, payout method, UPI id, bank account, IFSC, address)
+# key: (name, state code, PAN, approved, payout method, UPI id, bank account, IFSC, address, email, MSME class, written agreement)
 _S = {
     "mahalaxmi": ("Mahalaxmi Office Supplies", "27", "AAACM3174B", 1, "UPI", "mahalaxmi.office@okhdfcbank",
-                  "50200034871265", "HDFC0000240", "Unit 4, Lower Parel Commercial Hub, Mumbai, Maharashtra 400013"),
+                  "50200034871265", "HDFC0000240", "Unit 4, Lower Parel Commercial Hub, Mumbai, Maharashtra 400013", "accounts@mahalaxmioffice.example.com", 'small', 1),
     "brightline": ("Brightline Packaging Pvt Ltd", "29", "AABCB7733F", 1, "BANK", None,
-                   "917020045512309", "UTIB0000532", "Plot 21, Peenya Industrial Area, Bengaluru, Karnataka 560058"),
+                   "917020045512309", "UTIB0000532", "Plot 21, Peenya Industrial Area, Bengaluru, Karnataka 560058", "billing@brightlinepack.example.com", 'micro', 0),
     "konkan": ("Konkan Freight Logistics", "27", "AAFCK2290H", 1, "UPI", "konkanfreight@oksbi",
-               "39482015567", "SBIN0001104", "Survey 88, Hinjewadi Phase 2, Pune, Maharashtra 411057"),
+               "39482015567", "SBIN0001104", "Survey 88, Hinjewadi Phase 2, Pune, Maharashtra 411057", "accounts@konkanfreight.example.com", None, 0),
     "summit": ("Summit IT Services Pvt Ltd", "36", "AAHCS5516J", 1, "BANK", None,
-               "000405112233", "ICIC0000004", "3rd Floor, Raheja Mindspace, HITEC City, Hyderabad, Telangana 500081"),
+               "000405112233", "ICIC0000004", "3rd Floor, Raheja Mindspace, HITEC City, Hyderabad, Telangana 500081", "finance@summitit.example.com", None, 0),
     "greenleaf": ("GreenLeaf Facility Services", "29", "AAGCG8841P", 1, "UPI", "greenleaf.fm@okicici",
-                  "123456789012", "ICIC0000102", "9 Whitefield Main Road, Bengaluru, Karnataka 560066"),
+                  "123456789012", "ICIC0000102", "9 Whitefield Main Road, Bengaluru, Karnataka 560066", "accounts@greenleaffm.example.com", 'small', 0),
     "atlas": ("Atlas Industrial Parts", "24", "AAACA6012N", 1, "BANK", None,
-              "60104837201", "BARB0NARODA", "Shed 14, Naroda GIDC, Ahmedabad, Gujarat 382330"),
+              "60104837201", "BARB0NARODA", "Shed 14, Naroda GIDC, Ahmedabad, Gujarat 382330", "sales@atlasindparts.example.com", None, 0),
     "pinnacle": ("Pinnacle Print & Design", "33", "AAJFP4417Q", 1, "UPI", "pinnacleprint@okaxis",
-                 "602411887721", "UTIB0000611", "18 Usman Road, T. Nagar, Chennai, Tamil Nadu 600017"),
+                 "602411887721", "UTIB0000611", "18 Usman Road, T. Nagar, Chennai, Tamil Nadu 600017", "accounts@pinnacleprint.example.com", 'micro', 0),
     "orchard": ("Orchard Catering Services", "32", "AABCO9120R", 1, "UPI", "orchardcatering@oksbi",
-                "32881940027", "SBIN0070231", "Orchard House, Edappally, Kochi, Kerala 682024"),
+                "32881940027", "SBIN0070231", "Orchard House, Edappally, Kochi, Kerala 682024", "billing@orchardcatering.example.com", 'small', 1),
     "blueriver": ("BlueRiver Software Licensing", "06", "AAECB3302T", 1, "BANK", None,
-                  "014801523467", "ICIC0000148", "Level 5, Cyber Hub, DLF Cyber City, Gurugram, Haryana 122002"),
+                  "014801523467", "ICIC0000148", "Level 5, Cyber Hub, DLF Cyber City, Gurugram, Haryana 122002", "ar@blueriversoft.example.com", None, 0),
     "cedarpine": ("Cedar & Pine Furniture", "08", "AAHFC7765V", 1, "UPI", "cedarpine@okhdfcbank",
-                  "50100288713390", "HDFC0001882", "E-27, Sitapura Industrial Area, Jaipur, Rajasthan 302022"),
+                  "50100288713390", "HDFC0001882", "E-27, Sitapura Industrial Area, Jaipur, Rajasthan 302022", "accounts@cedarpine.example.com", 'small', 1),
     "lumen": ("Lumen Electrical Contractors", "07", "AAGFL1180W", 1, "UPI", "lumen.electrical@okicici",
-              "004501208833", "ICIC0000045", "B-12, Okhla Industrial Estate Phase 3, New Delhi 110020"),
+              "004501208833", "ICIC0000045", "B-12, Okhla Industrial Estate Phase 3, New Delhi 110020", "office@lumenelectrical.example.com", 'micro', 0),
     "shadowline": ("Shadowline Trading", "07", "AAJCS9908X", 0, "UPI", "shadowline@okaxis",
-                   "778800112233", "UTIB0000999", "Shop 99, Karol Bagh Market, New Delhi 110005"),
+                   "778800112233", "UTIB0000999", "Shop 99, Karol Bagh Market, New Delhi 110005", "hello@shadowline.example.com", None, 0),
 }
 
-SUPPLIERS = [  # (name, approved, gstin, bank_account, ifsc, upi_id, payout_method, address)
-    (n, ap, make_gstin(st, pan), acct, ifsc, upi, method, addr)
-    for (n, st, pan, ap, method, upi, acct, ifsc, addr) in _S.values()
+SUPPLIERS = [  # (name, approved, gstin, bank_account, ifsc, upi_id, payout_method, address, email, msme, agreement)
+    (n, ap, make_gstin(st, pan), acct, ifsc, upi, method, addr, email, msme, agr)
+    for (n, st, pan, ap, method, upi, acct, ifsc, addr, email, msme, agr) in _S.values()
 ]
 _BY_KEY = {k: {"name": v[0], "gstin": make_gstin(v[1], v[2]), "upi": v[5], "account": v[6], "ifsc": v[7],
-               "address": v[8], "method": v[4]} for k, v in _S.items()}
+               "address": v[8], "method": v[4], "email": v[9], "msme": v[10], "agreement": v[11]} for k, v in _S.items()}
 SUP = {v["name"]: v for v in _BY_KEY.values()}
 
 

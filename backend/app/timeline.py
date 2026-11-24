@@ -86,7 +86,7 @@ def build(conn, inv_id: int) -> dict | None:
         state = {"AUTO_PAY": "pass", "HOLD": "warn", "BLOCK": "fail"}[inv["decision"]]
         decision = _step("decision", "Decision", state, label)  # the reason is shown in the step that caused it
         for e in events:
-            if e["event"] in ("owner_approved", "owner_rejected", "approval_refused"):
+            if e["event"] in ("owner_approved", "owner_rejected", "approval_refused", "correction_requested"):
                 decision["details"].append(f"{timeutil.to_ist(e['created_at'])}: {e['reason']}")
     else:
         decision = _step("decision", "Decision", "pending", "Not decided yet")

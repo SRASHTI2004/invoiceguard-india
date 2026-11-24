@@ -1,11 +1,12 @@
 import { CheckCheck, FileSearch, TriangleAlert } from "lucide-react";
-import { useApprovalActions } from "../actions";
+import { CorrectionButton, useApprovalActions, useCorrectionAction } from "../actions";
 import { inr, Invoice } from "../api";
-import { fmtDate } from "../lib";
+import { fmtDate, fmtDateTime } from "../lib";
 import { EmptyState, GstBadge } from "../ui";
 
 export default function ApprovalsPage({ held, reload, open }: { held: Invoice[]; reload: () => Promise<void>; open: (id: number) => void }) {
   const { ask, dialog, busyId } = useApprovalActions(reload);
+  const correction = useCorrectionAction(reload);
   return (
     <>
       <div className="page-head">
@@ -28,10 +29,11 @@ export default function ApprovalsPage({ held, reload, open }: { held: Invoice[];
                 </div>
                 <div className="amount-big">{inr(inv.total_paise)}</div>
               </div>
-              <div className="why"><TriangleAlert size={18} aria-hidden="true" /><div><strong>Why it is on hold</strong><div>{inv.reason}</div></div></div>
+              <div className="why"><TriangleAlert size={18} aria-hidden="true" /><div><strong>Why it is on hold</strong><div>{inv.reason}</div>{inv.correction_requested_at && <div className="why-note">Corrected invoice requested on {fmtDateTime(inv.correction_requested_at)}.</div>}</div></div>
               <div className="row-actions">
                 <button className="btn btn-primary" disabled={busyId === inv.id} onClick={() => ask(inv, "approve")}>Approve &amp; pay</button>
                 <button className="btn btn-danger" disabled={busyId === inv.id} onClick={() => ask(inv, "reject")}>Reject</button>
+                <CorrectionButton inv={inv} action={correction} />
                 <button className="btn btn-ghost" onClick={() => open(inv.id)}><FileSearch size={16} aria-hidden="true" />See full journey</button>
               </div>
             </article>
@@ -39,6 +41,7 @@ export default function ApprovalsPage({ held, reload, open }: { held: Invoice[];
         </div>
       )}
       {dialog}
+      {correction.dialog}
     </>
   );
 }

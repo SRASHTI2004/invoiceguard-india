@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
-from . import agent, config, db, gemini, gst, payouts, pipeline, timeline
+from . import agent, config, corrections, db, gemini, gst, payouts, pipeline, timeline
 
 router = APIRouter(prefix="/api")
 MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -46,8 +46,11 @@ LIST_COLUMNS = ("id, filename, supplier_name, supplier_gstin, buyer_gstin, place
 @router.get("/invoices")
 def list_invoices(conn=Depends(get_conn)):
     rows = _rows(conn, f"SELECT {LIST_COLUMNS} FROM invoices ORDER BY id DESC")
+    asked = {r["invoice_id"]: r["at"] for r in conn.execute(
+        "SELECT invoice_id, MAX(created_at) AS at FROM audit_log WHERE event='correction_requested' GROUP BY invoice_id")}
     for r in rows:
         r["gst_report"] = json.loads(r["gst_report"]) if r["gst_report"] else []
+        r["correction_requested_at"] = asked.get(r["id"])
     return rows
 
 
@@ -77,9 +80,19 @@ async def upload_invoice(file: UploadFile = File(...), conn=Depends(get_conn)):
     return pipeline.process_invoice(conn, data, Path(file.filename or "invoice.pdf").name)
 
 
+class ApproveRequest(BaseModel):
+    reason: str | None = None  # required when the invoice still has a GST problem
+
+
 @router.post("/invoices/{invoice_id}/approve")
-def approve(invoice_id: int, conn=Depends(get_conn)):
-    return _act(pipeline.approve, conn, invoice_id)
+def approve(invoice_id: int, req: ApproveRequest | None = None, conn=Depends(get_conn)):
+    return _act(pipeline.approve, conn, invoice_id, None, req.reason if req else None)
+
+
+@router.post("/invoices/{invoice_id}/request-correction")
+def request_correction(invoice_id: int, conn=Depends(get_conn)):
+    """Draft (and log) an email asking the supplier for a corrected invoice. Nothing is sent."""
+    return _act(corrections.draft, conn, invoice_id)
 
 
 @router.post("/invoices/{invoice_id}/reject")

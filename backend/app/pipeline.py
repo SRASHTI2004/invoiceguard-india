@@ -126,7 +126,21 @@ def _back_to_held(conn, inv_id: int, reason: str) -> None:
     conn.commit()
 
 
-def approve(conn, inv_id: int, note: str | None = None) -> dict:
+MIN_REASON_CHARS = 8
+MAX_REASON_CHARS = 300
+
+
+def gst_failures(conn, inv: dict) -> list[dict]:
+    """Fresh GST check at this moment: the failed results (empty = no GST problem)."""
+    if not inv["supplier_name"] or inv["total_paise"] is None:
+        return []
+    _, report = checks.run_checks_with_report(conn, _check_input(inv), exclude_id=inv["id"])
+    return [r.as_dict() for r in report if not r.ok]
+
+
+def approve(conn, inv_id: int, note: str | None = None, gst_reason: str | None = None) -> dict:
+    """Owner approval of a HELD invoice. Re-runs the checks first. If the invoice still has a GST problem the owner
+    must give a short reason, which is saved in the audit log."""
     inv = get_invoice(conn, inv_id)
     if inv is None:
         raise ActionError("Invoice not found")
@@ -136,7 +150,18 @@ def approve(conn, inv_id: int, note: str | None = None) -> dict:
     if blockers:
         audit.log(conn, inv_id, "approval_refused", "BLOCK", "; ".join(blockers))
         raise ActionError("Cannot approve, the checks now fail: " + "; ".join(blockers))
-    audit.log(conn, inv_id, "owner_approved", "APPROVED", note or "Approved by the owner")
+    failed = gst_failures(conn, inv)
+    if failed:
+        reason = " ".join((gst_reason or "").split())
+        if len(reason) < MIN_REASON_CHARS:
+            raise ActionError(f"This invoice has a GST problem ({', '.join(f['label'] for f in failed)}). "
+                              f"Enter a short reason (at least {MIN_REASON_CHARS} characters) to approve it anyway.")
+        reason = reason[:MAX_REASON_CHARS]
+        audit.log(conn, inv_id, "owner_approved", "APPROVED",
+                  f"Approved despite a GST problem ({', '.join(f['label'] for f in failed)}). Reason given: {reason}",
+                  {"gst_override": True, "reason": reason, "failed_checks": [f["code"] for f in failed]})
+    else:
+        audit.log(conn, inv_id, "owner_approved", "APPROVED", note or "Approved by the owner")
     return pay_invoice(conn, inv_id, actor="owner")
 
 

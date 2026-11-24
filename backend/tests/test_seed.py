@@ -21,7 +21,7 @@ def test_supplier_and_buyer_gstins_are_valid_and_match_the_config():
     assert gst.validate_gstin(BUYER["gstin"])[0] and BUYER["gstin"] == config.BUYER_GSTIN
     for name, _, gstin, *_ in SUPPLIERS:
         assert gst.validate_gstin(gstin)[0], name
-    for name, approved, gstin, account, ifsc, upi, method, _ in SUPPLIERS:
+    for name, approved, gstin, account, ifsc, upi, method, *_ in SUPPLIERS:
         assert (method == "UPI" and upi) or (method == "BANK" and account and ifsc), name
 
 

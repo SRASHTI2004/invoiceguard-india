@@ -13,7 +13,10 @@ CREATE TABLE IF NOT EXISTS suppliers (
     ifsc           TEXT,
     upi_id         TEXT,
     payout_method  TEXT NOT NULL DEFAULT 'UPI',   -- UPI or BANK
-    notes          TEXT                  -- address
+    notes          TEXT,                 -- address
+    email          TEXT,                 -- accounts contact, used to draft correction requests
+    msme           TEXT,                 -- NULL, 'micro' or 'small' (Section 43B(h) payment timer)
+    msme_written_agreement INTEGER NOT NULL DEFAULT 0   -- 1 = written agreement, so the 45-day limit applies; else 15
 );
 
 CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -57,6 +60,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     payout_method     TEXT,              -- UPI / IMPS / RTGS
     payout_destination TEXT,             -- masked, e.g. ra***@okhdfc or XXXXXX1234
     paid_at           TEXT,              -- when the payout was sent (for the daily limit)
+    accepted_date     TEXT,              -- IST date the invoice was accepted; the MSME payment clock starts here
     created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

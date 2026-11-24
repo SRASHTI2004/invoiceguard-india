@@ -18,3 +18,4 @@ Prasunex Innovathon Round 3. Built from the original InvoiceGuard repo. Each ste
 
 ## Final pass (Round 3 polish)
 - [x] 1. All timestamps in IST (Asia/Kolkata): `timeutil.py`, audit log and drawer show "24 Nov 2026, 5:13 pm IST"; the daily payment limit now counts the IST day. 3 tests.
+- [x] 2. GST failure path: "Ask supplier for a corrected invoice" drafts an email naming the exact GST issue (`corrections.py`, nothing is sent) and logs `correction_requested`; Approve & pay on a GST failure requires a reason (min 8 chars), saved in the audit log; block-level GST failures (fake GSTIN) still cannot be approved. Suppliers now carry an email, MSME class and written-agreement flag. 11 tests.

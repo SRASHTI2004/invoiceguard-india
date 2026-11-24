@@ -35,6 +35,7 @@ export interface Invoice {
   payout_method: string | null;
   payout_destination: string | null;
   paid_at: string | null;
+  correction_requested_at: string | null;
   created_at: string;
 }
 
@@ -68,6 +69,15 @@ export interface TimelineStep {
   state: StepState;
   summary: string;
   details: string[];
+}
+
+export interface CorrectionDraft {
+  to: string;
+  subject: string;
+  body: string;
+  issues: string[];
+  mailto: string;
+  sent: boolean;
 }
 
 export interface AppConfig {
@@ -154,7 +164,9 @@ export const api = {
     form.append("file", file);
     return call<Invoice>("/api/invoices/upload", { method: "POST", body: form });
   },
-  approve: (id: number) => post<Invoice>(`/api/invoices/${id}/approve`),
+  approve: (id: number, reason?: string) =>
+    call<Invoice>(`/api/invoices/${id}/approve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason: reason ?? null }) }),
+  requestCorrection: (id: number) => post<CorrectionDraft>(`/api/invoices/${id}/request-correction`),
   reject: (id: number) => post<Invoice>(`/api/invoices/${id}/reject`),
   refreshPayout: (id: number) => post<Invoice>(`/api/invoices/${id}/refresh-payout`),
   agent: (message: string) =>
