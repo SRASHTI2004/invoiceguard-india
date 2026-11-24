@@ -310,6 +310,7 @@ table.tbl { width: 100%; border-collapse: collapse; }
 .toasts { position: fixed; right: 24px; top: 76px; z-index: 80; display: grid; gap: 8px; max-width: min(420px, calc(100vw - 32px)); }
 .toast { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: var(--r-sm); background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); font-size: 0.88rem; animation: rise 0.2s ease-out; }
 .toast svg { color: var(--t); flex: none; margin-top: 2px; }
+.toast span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 
 /* ---- landing ---- */
 .landing { min-height: 100vh; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 15% -10%, color-mix(in srgb, var(--brand) 16%, transparent), transparent), radial-gradient(700px 360px at 95% 5%, color-mix(in srgb, var(--accent) 14%, transparent), transparent), var(--bg); }

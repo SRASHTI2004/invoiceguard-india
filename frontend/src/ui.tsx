@@ -138,8 +138,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const push = useCallback((text: string, tone: Tone = "green") => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, text, tone }]);
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000);
+    setToasts((t) => [...t, { id, text, tone }].slice(-2)); // at most two on screen, newest last
+    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000);
   }, []);
   return (
     <ToastCtx.Provider value={push}>
