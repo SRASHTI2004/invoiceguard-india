@@ -1,6 +1,6 @@
-import { ChevronRight, FileSearch, Search, Upload } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
-import { api, inr, Invoice } from "../api";
+import { ChevronDown, ChevronRight, Download, FileSearch, Search, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api, inr, Invoice, SampleInvoice } from "../api";
 import { fmtDate } from "../lib";
 import { EmptyState, GstBadge, Spinner, StatusBadge, useToast } from "../ui";
 
@@ -13,6 +13,47 @@ const FILTERS: [string, string, (i: Invoice) => boolean][] = [
 
 const haystack = (i: Invoice) =>
   [i.supplier_name, i.invoice_number, i.po_number, i.supplier_gstin, i.reason, i.status, i.filename].join(" ").toLowerCase();
+
+/** Sample PDFs to download and upload, so anyone can try the real upload flow. */
+function SampleMenu() {
+  const [open, setOpen] = useState(false);
+  const [samples, setSamples] = useState<SampleInvoice[] | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (open && !samples) api.samples().then(setSamples).catch(() => setSamples([])); }, [open, samples]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  return (
+    <div className="menu" ref={ref}>
+      <button className="btn" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(!open)}>
+        <Download size={16} aria-hidden="true" />Download a sample invoice<ChevronDown size={14} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="menu-pop" role="region" aria-label="Sample invoices">
+          <p className="menu-note">Download one, then use <strong>Upload invoice</strong> to see it checked. Uploading the same file twice is blocked as a duplicate.</p>
+          {!samples ? <p className="muted" role="status">Loading…</p> : samples.length === 0 ? <p className="muted">Samples are unavailable right now.</p> : (
+            <ul>
+              {samples.map((s) => (
+                <li key={s.file}>
+                  <a href={s.url} download={s.file} onClick={() => setOpen(false)}>
+                    <span className="menu-title"><FileSearch size={14} aria-hidden="true" />{s.title}<span className={`badge badge-sm tone-${s.expected === "Paid" ? "green" : "amber"}`}>Expect: {s.expected}</span></span>
+                    <span className="menu-desc">{s.description}</span>
+                    <span className="menu-file">{s.file}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function InvoicesPage({ invoices, reload, openId, open }: {
   invoices: Invoice[]; reload: () => Promise<void>; openId: number | null; open: (id: number) => void;
@@ -47,7 +88,8 @@ export default function InvoicesPage({ invoices, reload, openId, open }: {
     <>
       <div className="page-head">
         <div><h1>Invoices</h1><p>Select an invoice to see how it moved through every check.</p></div>
-        <div>
+        <div className="head-actions">
+          <SampleMenu />
           <input ref={fileRef} type="file" accept="application/pdf" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
           <button className="btn btn-brand" disabled={busy} onClick={() => fileRef.current?.click()}>
             {busy ? <Spinner label="Checking invoice…" /> : <><Upload size={16} aria-hidden="true" />Upload invoice (PDF)</>}

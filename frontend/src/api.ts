@@ -80,6 +80,16 @@ export interface CorrectionDraft {
   sent: boolean;
 }
 
+export interface SampleInvoice {
+  file: string;
+  title: string;
+  description: string;
+  expected: string;
+  supplier: string;
+  invoice_number: string;
+  url: string;
+}
+
 export interface AppConfig {
   buyer_name: string;
   buyer_gstin: string;
@@ -157,6 +167,7 @@ export const api = {
   suppliers: () => call<Supplier[]>("/api/suppliers"),
   summary: () => call<Summary>("/api/summary"),
   config: () => call<AppConfig>("/api/config"),
+  samples: () => call<SampleInvoice[]>("/api/samples"),
   timeline: (id: number) => call<{ invoice_id: number; steps: TimelineStep[] }>(`/api/invoices/${id}/timeline`),
   audit: () => call<AuditRow[]>("/api/audit"),
   upload: (file: File) => {

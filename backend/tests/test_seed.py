@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from app import config, db, gemini, gst
-from seed.data import BUYER, DEMO_INVOICES, INVOICES, PURCHASE_ORDERS, SUP, SUPPLIERS, compute
+from seed.data import BUYER, DEMO_INVOICES, INVOICES, PURCHASE_ORDERS, SUP, SUPPLIERS, UPLOAD_SAMPLES, compute
 from seed.seed import seed_db
 
 SEED = Path(__file__).parents[1] / "seed"
@@ -64,7 +64,8 @@ def test_sample_pdfs_are_pre_cached_so_no_gemini_call_is_needed(tmp_path, monkey
     monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "t.db"))
     seed_db()
     with db.connect() as conn:
-        for inv in INVOICES + DEMO_INVOICES:
-            h = gemini.pdf_hash((SEED / "invoices" / inv["file"]).read_bytes())
+        for inv in INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES:
+            folder = "upload_samples" if inv in UPLOAD_SAMPLES else "invoices"
+            h = gemini.pdf_hash((SEED / folder / inv["file"]).read_bytes())
             kinds = {r[0] for r in conn.execute("SELECT kind FROM gemini_cache WHERE file_hash = ?", (h,))}
             assert kinds == {"extract", "review"}, inv["file"]

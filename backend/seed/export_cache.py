@@ -1,7 +1,7 @@
 """Build seed/gemini_cache.json (committed): Gemini's extraction + review result for every sample PDF, so the demo,
 the eval and a fresh deploy answer instantly with zero Gemini calls for these files. Run from backend/:
 
-    python -m seed.export_cache               # call Gemini live (needs GEMINI_API_KEY) and save the results
+    python -m seed.export_cache               # call Gemini live (needs GEMINI_API_KEY) for PDFs not yet cached
     python -m seed.export_cache --synthesize  # offline: write what Gemini SHOULD return, derived from the sample data
 
 --synthesize output is NOT real model output; it exists only so the project builds without an API key. The file
@@ -14,11 +14,15 @@ import time
 from pathlib import Path
 
 from app import ai_review, config, db, extract, gemini
-from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, compute
+from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, UPLOAD_SAMPLES, compute
 from seed.make_pdfs import pay_details
 
 HERE = Path(__file__).parent
-ALL = INVOICES + DEMO_INVOICES
+ALL = INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES
+
+
+def pdf_path(inv: dict) -> Path:
+    return HERE / ("upload_samples" if inv in UPLOAD_SAMPLES else "invoices") / inv["file"]
 
 
 def _rupees(paise):
@@ -52,14 +56,19 @@ def synthetic_review(inv: dict) -> dict:
 
 def main():
     synth = "--synthesize" in sys.argv
+    CACHE = HERE / "gemini_cache.json"
+    have = {(e["file_hash"], e["kind"]): e for e in json.loads(CACHE.read_text())} if CACHE.exists() and not synth else {}
     out = []
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         config.DB_PATH = str(Path(tmp) / "cache.db")
         db.init_db()
         conn = db.connect()
         for inv in ALL:
-            data = (HERE / "invoices" / inv["file"]).read_bytes()
+            data = pdf_path(inv).read_bytes()
             h = gemini.pdf_hash(data)
+            if all((h, k) in have for k in ("extract", "review")):  # already cached: keep it, spend no quota
+                out += [have[(h, k)] for k in ("extract", "review")]
+                continue
             if synth:
                 results = {"extract": synthetic_extract(inv), "review": synthetic_review(inv)}
             else:
@@ -73,7 +82,7 @@ def main():
             for kind, result in results.items():
                 out.append({"file": inv["file"], "file_hash": h, "kind": kind, "result": result})
         conn.close()
-    (HERE / "gemini_cache.json").write_text(json.dumps(out, indent=1))
+    CACHE.write_text(json.dumps(out, indent=1))
     print(f"exported {len(out)} cached results ({'SYNTHESIZED, not real Gemini output' if synth else 'live Gemini'})")
 
 

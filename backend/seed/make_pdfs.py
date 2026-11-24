@@ -10,9 +10,10 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from app.money import inr
-from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, compute
+from seed.data import BUYER, DEMO_INVOICES, INVOICES, SUP, UPLOAD_SAMPLES, compute
 
 OUT = Path(__file__).parent / "invoices"
+UPLOAD_OUT = Path(__file__).parent / "upload_samples"
 W, H = A4
 
 
@@ -272,18 +273,19 @@ STYLES = dict(classic=style_classic, modern=style_modern, minimal=style_minimal,
 
 def main(only=None):
     OUT.mkdir(exist_ok=True)
+    UPLOAD_OUT.mkdir(exist_ok=True)
     labels = []
-    for inv in INVOICES + DEMO_INVOICES:
+    for inv in INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES:
         if inv in INVOICES:  # demo-only invoices are not part of the eval labels
             labels.append({k: inv[k] for k in ("file", "supplier", "number", "is_fraud", "expected", "category")})
         if only and inv["file"] not in only:
             continue
-        c = canvas.Canvas(str(OUT / inv["file"]), pagesize=A4, invariant=1)  # invariant: same bytes every run
+        c = canvas.Canvas(str((UPLOAD_OUT if inv in UPLOAD_SAMPLES else OUT) / inv["file"]), pagesize=A4, invariant=1)  # invariant: same bytes every run
         c.setTitle(f"Tax Invoice {inv['number']}")
         STYLES[inv["style"]](c, inv)
         c.save()
     (Path(__file__).parent / "labels.json").write_text(json.dumps(labels, indent=2))
-    print(f"wrote {len(INVOICES) + len(DEMO_INVOICES)} PDFs to {OUT}")
+    print(f"wrote {len(INVOICES) + len(DEMO_INVOICES)} PDFs to {OUT} and {len(UPLOAD_SAMPLES)} to {UPLOAD_OUT}")
 
 
 if __name__ == "__main__":

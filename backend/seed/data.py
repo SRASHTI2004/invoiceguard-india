@@ -141,11 +141,36 @@ DEMO_INVOICES = [
 ]
 
 
+# Invoices for judges to download and upload themselves (they are NOT part of the demo run or the eval, and have their own
+# purchase orders, so uploading them after loading the demo data behaves exactly as described). Uploading the same file
+# twice is blocked as a duplicate, which is the point of the duplicate check.
+UPLOAD_SAMPLES = [
+    dict(file="sample_1_valid_cgst_sgst.pdf", supplier="Brightline Packaging Pvt Ltd", number="BP/26-27/9002", po="PO-2101",
+         date="2026-11-20", due="2026-12-05", style="classic", accent=(0.0, 0.5, 0.45),
+         items=[("Corrugated mailer box (L)", "4819", 800, 5200, 18), ("Bubble wrap roll", "3920", 25, 64000, 18),
+                ("Packing tape (carton of 36)", "3919", 10, 98000, 18)],
+         title="Valid invoice, same state", expect="Paid",
+         blurb="Bengaluru supplier billing a Bengaluru buyer: CGST + SGST, every GST check passes, paid automatically."),
+    dict(file="sample_2_valid_igst.pdf", supplier="Mahalaxmi Office Supplies", number="MOS/26-27/1099", po="PO-2102",
+         date="2026-11-21", due="2026-12-06", style="modern", accent=(0.1, 0.2, 0.5),
+         items=[("A4 notebooks (pack of 10)", "4820", 60, 42000, 12), ("Ball pens (box of 50)", "9608", 40, 25000, 18),
+                ("Sticky notes (pack of 12)", "4820", 50, 31000, 12)],
+         title="Valid invoice, other state", expect="Paid",
+         blurb="Mumbai supplier billing a Bengaluru buyer: IGST, mixed 12% and 18% rates, paid automatically."),
+    dict(file="sample_3_gst_problem.pdf", supplier="GreenLeaf Facility Services", number="GL/7811", po="PO-2103",
+         date="2026-11-22", due="2026-12-07", style="statement", accent=(0.1, 0.4, 0.1),
+         items=[("Monthly housekeeping contract", "998533", 1, 2200000, 18), ("Deep cleaning of server room", "998533", 1, 450000, 18)],
+         tax_mode="inter",  # Bengaluru -> Bengaluru is the same state: this invoice wrongly charges IGST
+         title="GST problem: wrong tax type", expect="On hold",
+         blurb="Same-state supply that charges IGST instead of CGST + SGST. Held; try asking the supplier for a corrected invoice."),
+]
+
+
 def _po_rows():
     """One PO per supplier PO number. The PO value is what the correct invoice should total (incl. GST). The wrong-total
     sample's PO was raised against the supplier's own (wrongly added) quote, so only the GST check can catch it."""
     pos = {}
-    for inv in INVOICES + DEMO_INVOICES:
+    for inv in INVOICES + DEMO_INVOICES + UPLOAD_SAMPLES:
         c = compute(inv)
         amount = inv.get("po_amount") or c["total"]
         if inv["po"] == "PO-2999":

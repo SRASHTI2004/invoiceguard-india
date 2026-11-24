@@ -4,7 +4,10 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
+from seed.data import UPLOAD_SAMPLES
 
 from . import agent, config, corrections, db, gemini, gst, payouts, pipeline, timeline
 
@@ -132,6 +135,24 @@ def audit_log(invoice_id: int | None = None, conn=Depends(get_conn)):
     if invoice_id is not None:
         return _rows(conn, "SELECT * FROM audit_log WHERE invoice_id = ? ORDER BY id DESC", (invoice_id,))
     return _rows(conn, "SELECT * FROM audit_log ORDER BY id DESC LIMIT 500")
+
+
+UPLOAD_SAMPLES_DIR = Path(__file__).resolve().parents[1] / "seed" / "upload_samples"
+
+
+@router.get("/samples")
+def list_samples():
+    """Sample invoice PDFs the visitor can download and upload to try the whole flow."""
+    return [{"file": s["file"], "title": s["title"], "description": s["blurb"], "expected": s["expect"],
+             "supplier": s["supplier"], "invoice_number": s["number"], "url": f"/api/samples/{s['file']}"}
+            for s in UPLOAD_SAMPLES]
+
+
+@router.get("/samples/{filename}")
+def download_sample(filename: str):
+    if filename not in {s["file"] for s in UPLOAD_SAMPLES}:  # whitelist: no path tricks
+        raise HTTPException(404, "Sample not found")
+    return FileResponse(UPLOAD_SAMPLES_DIR / filename, media_type="application/pdf", filename=filename)
 
 
 @router.post("/demo/run-samples")

@@ -144,6 +144,17 @@ a { color: var(--brand); }
 .chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .chip .n { opacity: 0.75; font-weight: 500; }
 .spacer { flex: 1; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.menu { position: relative; }
+.menu-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: min(400px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r); box-shadow: var(--shadow-lg); padding: 16px; animation: rise 0.15s ease-out; }
+.menu-note { font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+.menu-pop ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.menu-pop a { display: grid; gap: 4px; padding: 12px; border-radius: var(--r-sm); border: 1px solid var(--border); text-decoration: none; color: var(--text); transition: border-color 0.15s, background 0.15s; }
+.menu-pop a:hover { border-color: var(--brand); background: var(--surface-2); }
+.menu-title { display: flex; align-items: center; gap: 8px; font-weight: 650; flex-wrap: wrap; }
+.menu-title .badge { margin-left: auto; }
+.menu-desc { font-size: 0.82rem; color: var(--muted); }
+.menu-file { font-size: 0.74rem; color: var(--brand); font-family: ui-monospace, Menlo, Consolas, monospace; }
 
 /* ---- invoice table ---- */
 .table-card { overflow: hidden; }
@@ -338,6 +349,9 @@ table.tbl { width: 100%; border-collapse: collapse; }
   .kpis { gap: 8px; } .kpi { padding: 12px 16px; } .kpi-value { font-size: 1.35rem; } .kpi-icon { display: none; }
   .card-pad { padding: 16px; }
   .search { max-width: none; flex-basis: 100%; }
+  .head-actions, .head-actions .menu, .head-actions > .btn { width: 100%; }
+  .head-actions .menu > .btn { width: 100%; }
+  .menu-pop { left: 0; right: 0; width: auto; }
   .chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; width: calc(100% + 32px); }
   .chip { flex: none; }
   /* table rows become stacked cards */

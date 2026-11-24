@@ -685,5 +685,166 @@
    "signals": [],
    "reasons": []
   }
+ },
+ {
+  "file": "sample_1_valid_cgst_sgst.pdf",
+  "file_hash": "fb300e0b2ca49021b30dc32b2bffe1e53f054de8852d8c7013c960c7babf287e",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "29AABCB5521M1ZJ",
+   "cgst": 6066.0,
+   "due_date": "2026-12-05",
+   "igst": null,
+   "invoice_date": "2026-11-20",
+   "invoice_number": "BP/26-27/9002",
+   "line_items": [
+    {
+     "description": "Corrugated mailer box (L)",
+     "gst_rate": 18.0,
+     "hsn_sac": "4819",
+     "quantity": 800.0,
+     "unit_price": 52.0
+    },
+    {
+     "description": "Bubble wrap roll",
+     "gst_rate": 18.0,
+     "hsn_sac": "3920",
+     "quantity": 25.0,
+     "unit_price": 640.0
+    },
+    {
+     "description": "Packing tape (carton of 36)",
+     "gst_rate": 18.0,
+     "hsn_sac": "3919",
+     "quantity": 10.0,
+     "unit_price": 980.0
+    }
+   ],
+   "payee_account": "917020045512309",
+   "payee_ifsc": "UTIB0000532",
+   "payee_upi": null,
+   "place_of_supply": "29-Karnataka",
+   "po_number": "PO-2101",
+   "sgst": 6066.0,
+   "supplier_gstin": "29AABCB7733F1ZO",
+   "supplier_name": "Brightline Packaging Pvt Ltd",
+   "taxable_value": 67400.0,
+   "total": 79532.0
+  }
+ },
+ {
+  "file": "sample_1_valid_cgst_sgst.pdf",
+  "file_hash": "fb300e0b2ca49021b30dc32b2bffe1e53f054de8852d8c7013c960c7babf287e",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "sample_2_valid_igst.pdf",
+  "file_hash": "6fea536b9b8ada16baa349e658bcaf54dd2839c5562ad5323a0c29c7499d7c6e",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "29AABCB5521M1ZJ",
+   "cgst": null,
+   "due_date": "2026-12-06",
+   "igst": 6684.0,
+   "invoice_date": "2026-11-21",
+   "invoice_number": "MOS/26-27/1099",
+   "line_items": [
+    {
+     "description": "A4 notebooks (pack of 10)",
+     "gst_rate": 12.0,
+     "hsn_sac": "4820",
+     "quantity": 60.0,
+     "unit_price": 420.0
+    },
+    {
+     "description": "Ball pens (box of 50)",
+     "gst_rate": 18.0,
+     "hsn_sac": "9608",
+     "quantity": 40.0,
+     "unit_price": 250.0
+    },
+    {
+     "description": "Sticky notes (pack of 12)",
+     "gst_rate": 12.0,
+     "hsn_sac": "4820",
+     "quantity": 50.0,
+     "unit_price": 310.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "mahalaxmi.office@okhdfcbank",
+   "place_of_supply": "29-Karnataka",
+   "po_number": "PO-2102",
+   "sgst": null,
+   "supplier_gstin": "27AAACM3174B1ZV",
+   "supplier_name": "Mahalaxmi Office Supplies",
+   "taxable_value": 50700.0,
+   "total": 57384.0
+  }
+ },
+ {
+  "file": "sample_2_valid_igst.pdf",
+  "file_hash": "6fea536b9b8ada16baa349e658bcaf54dd2839c5562ad5323a0c29c7499d7c6e",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
+ },
+ {
+  "file": "sample_3_gst_problem.pdf",
+  "file_hash": "ba5e65b7e982ffc18b30bcd32c20ca4bb6b87368cdb99d0fc87bd1c394e9c1da",
+  "kind": "extract",
+  "result": {
+   "buyer_gstin": "29AABCB5521M1ZJ",
+   "cgst": null,
+   "due_date": "2026-12-07",
+   "igst": 4770.0,
+   "invoice_date": "2026-11-22",
+   "invoice_number": "GL/7811",
+   "line_items": [
+    {
+     "description": "Monthly housekeeping contract",
+     "gst_rate": 18.0,
+     "hsn_sac": "998533",
+     "quantity": 1.0,
+     "unit_price": 22000.0
+    },
+    {
+     "description": "Deep cleaning of server room",
+     "gst_rate": 18.0,
+     "hsn_sac": "998533",
+     "quantity": 1.0,
+     "unit_price": 4500.0
+    }
+   ],
+   "payee_account": null,
+   "payee_ifsc": null,
+   "payee_upi": "greenleaf.fm@okicici",
+   "place_of_supply": "29-Karnataka",
+   "po_number": "PO-2103",
+   "sgst": null,
+   "supplier_gstin": "29AAGCG8841P1ZQ",
+   "supplier_name": "GreenLeaf Facility Services",
+   "taxable_value": 26500.0,
+   "total": 31270.0
+  }
+ },
+ {
+  "file": "sample_3_gst_problem.pdf",
+  "file_hash": "ba5e65b7e982ffc18b30bcd32c20ca4bb6b87368cdb99d0fc87bd1c394e9c1da",
+  "kind": "review",
+  "result": {
+   "risk_score": 0.0,
+   "signals": [],
+   "reasons": []
+  }
  }
 ]
