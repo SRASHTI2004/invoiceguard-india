@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { CorrectionButton, useApprovalActions, useCorrectionAction } from "./actions";
 import { fmtDate } from "./lib";
 import { api, inr, Invoice, TimelineStep } from "./api";
-import { CloseButton, ErrorState, GstBadge, Overlay, Skeleton, Spinner, StatusBadge, StepIcon, useToast } from "./ui";
+import { CloseButton, ErrorState, GstBadge, MsmeChip, MsmeNotice, Overlay, Skeleton, Spinner, StatusBadge, StepIcon, useToast } from "./ui";
 
 function Timeline({ invoice }: { invoice: Invoice }) {
   const [steps, setSteps] = useState<TimelineStep[] | null>(null);
@@ -83,12 +83,24 @@ export default function InvoiceDrawer({ invoice, onClose, reload }: { invoice: I
           <div className="meta-row"><span>Invoice {invoice.invoice_number ?? "?"}</span><span>{fmtDate(invoice.invoice_date)}</span><span>PO {invoice.po_number ?? "none"}</span></div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12, alignItems: "center" }}>
             <span className="amount-big">{inr(invoice.total_paise) || "–"}</span>
-            <StatusBadge status={invoice.status} /><GstBadge inv={invoice} />
+            <StatusBadge status={invoice.status} /><GstBadge inv={invoice} /><MsmeChip m={invoice.msme} />
           </div>
         </div>
         <span data-autofocus tabIndex={-1}><CloseButton onClose={onClose} /></span>
       </div>
       <div className="drawer-body">
+        {invoice.msme && (
+          <section aria-labelledby="d-msme">
+            <h3 className="sec-title" id="d-msme">MSME payment timer</h3>
+            <MsmeNotice m={invoice.msme} />
+            <dl className="kv" style={{ marginTop: 12 }}>
+              <div><dt>Supplier class</dt><dd style={{ textTransform: "capitalize" }}>{invoice.msme.class} enterprise</dd></div>
+              <div><dt>Accepted on</dt><dd>{fmtDate(invoice.msme.accepted_date)}</dd></div>
+              <div><dt>Limit</dt><dd>{invoice.msme.limit_days} days ({invoice.msme.basis})</dd></div>
+              <div><dt>Pay by</dt><dd>{fmtDate(invoice.msme.pay_by)}</dd></div>
+            </dl>
+          </section>
+        )}
         <section aria-labelledby="d-journey">
           <h3 className="sec-title" id="d-journey">Journey</h3>
           <Timeline invoice={invoice} />

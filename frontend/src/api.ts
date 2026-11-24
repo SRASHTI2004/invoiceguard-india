@@ -36,7 +36,21 @@ export interface Invoice {
   payout_destination: string | null;
   paid_at: string | null;
   correction_requested_at: string | null;
+  accepted_date: string | null;
+  msme: MsmeTimer | null;
   created_at: string;
+}
+
+export interface MsmeTimer {
+  class: "micro" | "small";
+  limit_days: number;
+  basis: string;
+  accepted_date: string;
+  pay_by: string;
+  days_left: number;
+  state: "ok" | "soon" | "overdue";
+  message: string;
+  note: string;
 }
 
 export interface Supplier {
@@ -50,6 +64,8 @@ export interface Supplier {
   upi_id: string | null;
   payout_method: string;
   address: string | null;
+  msme: "micro" | "small" | null;
+  msme_written_agreement: number;
 }
 
 export interface Summary {

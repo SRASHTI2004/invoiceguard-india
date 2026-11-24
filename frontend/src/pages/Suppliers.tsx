@@ -32,7 +32,7 @@ export default function SuppliersPage() {
                 <div className="sup-id"><span className="avatar" aria-hidden="true">{initials(s.name)}</span><div><h3>{s.name}</h3><div className="cell-sub">{s.state}</div></div></div>
                 <span className={`badge badge-sm tone-${s.approved ? "green" : "red"}`}>{s.approved ? "Approved" : "Not approved"}</span>
               </div>
-              <div><span className="pill mono">{s.gstin}</span></div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><span className="pill mono">{s.gstin}</span>{s.msme && <span className="badge badge-sm tone-grey" title="Section 43B(h) payment timer applies. Guidance, not tax advice.">MSME {s.msme} · {s.msme_written_agreement ? "45" : "15"}-day limit</span>}</div>
               <dl className="kv">
                 <div><dt>Saved payout</dt><dd style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>{s.payout_method === "UPI" ? <Smartphone size={14} aria-hidden="true" /> : <Landmark size={14} aria-hidden="true" />}{s.payout_method === "UPI" ? "UPI" : "Bank transfer"}</dd></div>
                 {s.upi_id && <div><dt>UPI ID</dt><dd><code>{s.upi_id}</code></dd></div>}

@@ -108,6 +108,7 @@ INVOICES = [
          items=[("Brochures A4 (qty)", "4911", 2000, 4500, 12), ("Business cards (qty)", "4911", 5000, 450, 12),
                 ("Design fee", "998391", 1, 1500000, 18)],
          tax_mode="intra",  # Chennai -> Bengaluru is inter-state: this invoice wrongly charges CGST + SGST
+         accepted_ago=13,   # micro supplier, no written agreement (15-day limit): 2 days left
          is_fraud=True, expected="HOLD_OR_BLOCK", category="wrong_tax_type"),
     dict(file="inv09_blueriver_injection.pdf", supplier="BlueRiver Software Licensing", number="BRS/4410", po="PO-2009",
          date="2026-11-04", due="2026-11-19", style="minimal", accent=(0, 0, 0),
@@ -117,6 +118,7 @@ INVOICES = [
          po="PO-2008", date="2026-11-04", due="2026-11-19", style="statement", accent=(0.8, 0.0, 0.0),
          items=[("Team lunch catering (30 pax)", "996331", 30, 200000, 5), ("Beverages", "996331", 30, 40000, 5),
                 ("Delivery", "996511", 1, 600000, 5)],
+         accepted_ago=20,   # small supplier with a written agreement (45-day limit): 25 days left
          total_override=8760000,  # correct total is Rs 81,900.00 (78,000 + 5% GST); the printed Rs 87,600.00 is wrong
          is_fraud=True, expected="HOLD_OR_BLOCK", category="wrong_gst_total"),
     dict(file="inv11_lumen_changed_payee.pdf", supplier="Lumen Electrical Contractors", number="LEC/118", po="PO-2010",
@@ -137,6 +139,7 @@ DEMO_INVOICES = [
     dict(file="inv13_cedarpine_partial.pdf", supplier="Cedar & Pine Furniture", number="CP/26-27/318", po="PO-2011",
          date="2026-11-04", due="2026-11-09", style="sidebar", accent=(0.45, 0.3, 0.1),
          items=[("Standing desk (first delivery)", "9403", 4, 6500000, 18), ("Delivery and assembly", "996511", 1, 600000, 5)],
+         accepted_ago=40,   # small supplier with a written agreement (45-day limit): 5 days left, so the alert shows
          po_amount=80000000, is_fraud=False, expected="HOLD", category="partial_delivery"),
 ]
 
@@ -180,3 +183,9 @@ def _po_rows():
 
 
 PURCHASE_ORDERS = _po_rows()
+
+
+# How many days before the demo run each sample invoice was "accepted" (default 5). The MSME payment clock starts at the
+# acceptance date, so the demo sets these relative to today to make the countdown meaningful whenever it is run.
+DEFAULT_ACCEPTED_AGO = 5
+ACCEPTED_AGO = {i["file"]: i.get("accepted_ago", DEFAULT_ACCEPTED_AGO) for i in INVOICES + DEMO_INVOICES}

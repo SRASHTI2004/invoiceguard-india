@@ -3,8 +3,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Invoice } from "./api";
-import { failedChecks } from "./lib";
+import { Invoice, MsmeTimer } from "./api";
+import { failedChecks, fmtDate } from "./lib";
 
 /* ---- status badges: always icon + text + colour, never colour alone ---------------------------------------------- */
 type Tone = "green" | "amber" | "red" | "grey";
@@ -52,6 +52,37 @@ export const StepIcon: Record<string, { Icon: LucideIcon; label: string }> = {
   skipped: { Icon: MinusCircle, label: "Skipped" },
   pending: { Icon: Clock, label: "Pending" },
 };
+
+/* ---- MSME payment timer (Section 43B(h)); guidance only ---------------------------------------------------------- */
+const MSME_TONE = { ok: "green", soon: "amber", overdue: "red" } as const;
+
+export function MsmeChip({ m }: { m: MsmeTimer | null }) {
+  if (!m) return null;
+  const left = m.days_left < 0 ? `${-m.days_left} ${-m.days_left === 1 ? "day" : "days"} overdue` : m.days_left === 0 ? "due today" : `${m.days_left} ${m.days_left === 1 ? "day" : "days"} left`;
+  return (
+    <span className={`badge badge-sm tone-${MSME_TONE[m.state]}`} title={m.message}>
+      <Clock size={12} aria-hidden="true" />
+      MSME {m.class} · Pay by {fmtDate(m.pay_by)} · {left}
+    </span>
+  );
+}
+
+/** Loud alert when the limit is close or passed; calm one-line note otherwise. Always says it is guidance. */
+export function MsmeNotice({ m }: { m: MsmeTimer | null }) {
+  if (!m) return null;
+  if (m.state === "ok")
+    return <p className="msme-note"><Clock size={14} aria-hidden="true" /><span>{m.message} <em>{m.note.split(".")[0]}.</em></span></p>;
+  return (
+    <div className={`alert tone-${MSME_TONE[m.state]}`} role={m.state === "overdue" ? "alert" : "status"}>
+      <AlertCircle size={18} aria-hidden="true" />
+      <div>
+        <strong>{m.state === "overdue" ? "MSME payment limit passed" : "MSME payment limit is close"}</strong>
+        <div>{m.message}</div>
+        <div className="msme-fine">{m.note}</div>
+      </div>
+    </div>
+  );
+}
 
 /* ---- state blocks ------------------------------------------------------------------------------------------------ */
 export function Spinner({ label }: { label?: string }) {

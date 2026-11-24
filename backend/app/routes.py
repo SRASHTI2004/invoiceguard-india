@@ -1,5 +1,6 @@
 import json
 import threading
+from datetime import timedelta
 import time
 from pathlib import Path
 
@@ -7,9 +8,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from seed.data import UPLOAD_SAMPLES
+from seed.data import ACCEPTED_AGO, DEFAULT_ACCEPTED_AGO, UPLOAD_SAMPLES
 
-from . import agent, config, corrections, db, gemini, gst, payouts, pipeline, timeline
+from . import agent, config, corrections, db, gemini, gst, msme, payouts, pipeline, timeline, timeutil
 
 router = APIRouter(prefix="/api")
 MAX_PDF_BYTES = 10 * 1024 * 1024
@@ -43,7 +44,7 @@ def _act(fn, *args):
 LIST_COLUMNS = ("id, filename, supplier_name, supplier_gstin, buyer_gstin, place_of_supply, invoice_number, "
                 "invoice_date, due_date, po_number, taxable_paise, cgst_paise, sgst_paise, igst_paise, total_paise, "
                 "payee_upi, payee_account, payee_ifsc, gst_report, status, decision, reason, risk_score, "
-                "payout_batch_id, payout_status, payout_method, payout_destination, paid_at, created_at")
+                "payout_batch_id, payout_status, payout_method, payout_destination, paid_at, accepted_date, supplier_id, created_at")
 
 
 @router.get("/invoices")
@@ -51,9 +52,12 @@ def list_invoices(conn=Depends(get_conn)):
     rows = _rows(conn, f"SELECT {LIST_COLUMNS} FROM invoices ORDER BY id DESC")
     asked = {r["invoice_id"]: r["at"] for r in conn.execute(
         "SELECT invoice_id, MAX(created_at) AS at FROM audit_log WHERE event='correction_requested' GROUP BY invoice_id")}
+    suppliers = {s["id"]: s for s in conn.execute("SELECT * FROM suppliers")}
     for r in rows:
         r["gst_report"] = json.loads(r["gst_report"]) if r["gst_report"] else []
         r["correction_requested_at"] = asked.get(r["id"])
+        # the MSME timer only matters while the invoice is still unpaid
+        r["msme"] = msme.deadline(suppliers.get(r["supplier_id"]), r["accepted_date"]) if r["status"] == "HELD" else None
     return rows
 
 
@@ -111,7 +115,7 @@ def refresh_payout(invoice_id: int, conn=Depends(get_conn)):
 @router.get("/suppliers")
 def suppliers(conn=Depends(get_conn)):
     rows = _rows(conn, "SELECT id, name, approved, gstin, bank_account, ifsc, upi_id, payout_method, "
-                       "notes AS address FROM suppliers ORDER BY name")
+                       "notes AS address, msme, msme_written_agreement FROM suppliers ORDER BY name")
     for r in rows:  # never send a full account number to the browser
         r["bank_account"] = payouts.mask_account(r["bank_account"]) if r["bank_account"] else None
         r["state"] = gst.state_name(gst.state_code_of(r["gstin"]))
@@ -171,8 +175,10 @@ def run_samples(conn=Depends(get_conn)):
         _demo["last_run"] = time.monotonic()
     pipeline.reset_demo_data(conn)
     processed = []
+    today = timeutil.today_ist()
     for pdf in sorted(SAMPLES_DIR.glob("*.pdf")):
-        processed.append(pipeline.process_invoice(conn, pdf.read_bytes(), pdf.name)["id"])
+        accepted = today - timedelta(days=ACCEPTED_AGO.get(pdf.name, DEFAULT_ACCEPTED_AGO))
+        processed.append(pipeline.process_invoice(conn, pdf.read_bytes(), pdf.name, accepted_date=accepted.isoformat())["id"])
     return {"processed": len(processed), "invoice_ids": processed, "summary": pipeline.summary(conn), "throttled": False}
 
 

@@ -2,7 +2,7 @@ import { CheckCircle2, ClipboardCheck, PauseCircle, PiggyBank, ReceiptIndianRupe
 import { useApprovalActions } from "../actions";
 import { inr, inrShort, Invoice, Summary } from "../api";
 import { hrefFor, useMedia } from "../lib";
-import { EmptyState, SkeletonCards } from "../ui";
+import { EmptyState, MsmeChip, SkeletonCards } from "../ui";
 
 /** Input tax credit protected: GST on blocked invoices with an invalid GSTIN or GST error. */
 function ItcCard({ s }: { s: Summary | null }) {
@@ -129,6 +129,7 @@ export default function Dashboard({ invoices, summary, loaded, reload, open }: {
                 <li key={inv.id}>
                   <div className="attn-top"><span className="attn-name">{inv.supplier_name ?? "Unreadable invoice"}</span><span className="attn-amt">{inr(inv.total_paise)}</span></div>
                   <div className="attn-why">{inv.reason}</div>
+                  {inv.msme && <div><MsmeChip m={inv.msme} /></div>}
                   <div className="attn-actions">
                     <button className="btn btn-sm btn-primary" disabled={busyId === inv.id} onClick={() => ask(inv, "approve")}>Approve &amp; pay</button>
                     <button className="btn btn-sm btn-danger" disabled={busyId === inv.id} onClick={() => ask(inv, "reject")}>Reject</button>

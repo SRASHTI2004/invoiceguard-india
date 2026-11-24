@@ -2,7 +2,7 @@ import { CheckCheck, FileSearch, TriangleAlert } from "lucide-react";
 import { CorrectionButton, useApprovalActions, useCorrectionAction } from "../actions";
 import { inr, Invoice } from "../api";
 import { fmtDate, fmtDateTime } from "../lib";
-import { EmptyState, GstBadge } from "../ui";
+import { EmptyState, GstBadge, MsmeChip, MsmeNotice } from "../ui";
 
 export default function ApprovalsPage({ held, reload, open }: { held: Invoice[]; reload: () => Promise<void>; open: (id: number) => void }) {
   const { ask, dialog, busyId } = useApprovalActions(reload);
@@ -25,11 +25,12 @@ export default function ApprovalsPage({ held, reload, open }: { held: Invoice[];
                 <div>
                   <h3>{inv.supplier_name ?? "Unreadable invoice"}</h3>
                   <div className="meta-row"><span>Invoice {inv.invoice_number ?? "?"}</span><span>PO {inv.po_number ?? "none"}</span><span>Due {fmtDate(inv.due_date)}</span></div>
-                  <div style={{ marginTop: 8 }}><GstBadge inv={inv} /></div>
+                  <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}><GstBadge inv={inv} /><MsmeChip m={inv.msme} /></div>
                 </div>
                 <div className="amount-big">{inr(inv.total_paise)}</div>
               </div>
               <div className="why"><TriangleAlert size={18} aria-hidden="true" /><div><strong>Why it is on hold</strong><div>{inv.reason}</div>{inv.correction_requested_at && <div className="why-note">Corrected invoice requested on {fmtDateTime(inv.correction_requested_at)}.</div>}</div></div>
+              <MsmeNotice m={inv.msme} />
               <div className="row-actions">
                 <button className="btn btn-primary" disabled={busyId === inv.id} onClick={() => ask(inv, "approve")}>Approve &amp; pay</button>
                 <button className="btn btn-danger" disabled={busyId === inv.id} onClick={() => ask(inv, "reject")}>Reject</button>

@@ -5,7 +5,7 @@ Only decide.py's output (or an explicit owner approval of a HELD invoice) can le
 import json
 import secrets
 
-from . import ai_review, audit, checks, decide, extract, gemini, payouts
+from . import ai_review, audit, checks, decide, extract, gemini, payouts, timeutil
 
 
 INSUFFICIENT_FUNDS_MESSAGE = (
@@ -41,10 +41,11 @@ def _save_extraction(conn, inv_id: int, inv: dict) -> None:
     conn.commit()
 
 
-def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None) -> dict:
-    """Run one uploaded invoice through the whole firewall and return the saved invoice."""
-    cur = conn.execute("INSERT INTO invoices (filename, file_hash, status) VALUES (?, ?, 'RECEIVED')",
-                       (filename, gemini.pdf_hash(pdf_bytes)))
+def process_invoice(conn, pdf_bytes: bytes, filename: str, gemini_client=None, accepted_date: str | None = None) -> dict:
+    """Run one uploaded invoice through the whole firewall and return the saved invoice.
+    accepted_date (IST, YYYY-MM-DD) is when we accepted it: the MSME payment clock starts there. Default: today."""
+    cur = conn.execute("INSERT INTO invoices (filename, file_hash, status, accepted_date) VALUES (?, ?, 'RECEIVED', ?)",
+                       (filename, gemini.pdf_hash(pdf_bytes), accepted_date or timeutil.today_ist().isoformat()))
     conn.commit()
     inv_id = cur.lastrowid
     audit.log(conn, inv_id, "received", details={"filename": filename})
