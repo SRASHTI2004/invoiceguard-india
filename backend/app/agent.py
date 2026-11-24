@@ -4,9 +4,43 @@ The AI agent can recommend, but only code checks plus a human click can move mon
 propose_payment re-runs the checks and records a recommendation. Paying happens only when the owner clicks
 "Confirm and pay" (pipeline.confirm_proposal -> the same approve path as the Approvals page, re-checked then).
 """
+import hashlib
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from . import checks, gemini, pipeline
+
+# ---- instant demo answers ----------------------------------------------------------------------------------------
+# The three suggested prompts were recorded once from a real Gemini run on the demo data (seed/agent_cache.json:
+# the tool calls Gemini made and its reply). Replaying one runs those SAME tool calls against the live invoices, so the
+# proposal is always computed fresh by code; only Gemini's wording is reused, and only while the invoices are in exactly
+# the recorded state. Anything else (other questions, a changed state) goes to Gemini live as usual.
+CACHE_FILE = Path(__file__).resolve().parents[1] / "seed" / "agent_cache.json"
+
+
+def _norm(message: str) -> str:
+    return " ".join(message.lower().split())
+
+
+def state_signature(conn) -> str:
+    """A fingerprint of the invoice state the recording was made against."""
+    rows = [tuple(r) for r in conn.execute("SELECT id, status, decision, total_paise FROM invoices ORDER BY id")]
+    return hashlib.sha256(json.dumps(rows).encode()).hexdigest()
+
+
+def cached_run(conn, message: str) -> dict | None:
+    """Replay a recorded demo answer if this prompt and invoice state were recorded; else None."""
+    if not CACHE_FILE.exists():
+        return None
+    entry = next((e for e in json.loads(CACHE_FILE.read_text())
+                  if e["prompt"] == _norm(message) and e["signature"] == state_signature(conn)), None)
+    if entry is None:
+        return None
+    steps = []
+    for call in entry["steps"]:
+        steps.append({"tool": call["tool"], "args": call["args"], "result": dispatch(conn, call["tool"], call["args"])})
+    return {"reply": entry["reply"], "steps": steps, "proposal": build_proposal(steps), "cached": True}
 
 MAX_MESSAGE_CHARS = 500
 TOOL_DECLARATIONS = [
@@ -89,9 +123,13 @@ def build_proposal(steps: list[dict]) -> dict:
             "total_recommended_paise": sum((i["invoice"] or {}).get("amount_paise") or 0 for i in recommended)}
 
 
-def run_agent(conn, message: str, today: str | None = None, client=None, max_steps: int = 8) -> dict:
+def run_agent(conn, message: str, today: str | None = None, client=None, max_steps: int = 8, use_cache: bool = True) -> dict:
     """Returns {"reply", "steps", "proposal"}. Raises gemini.GeminiError if Gemini is down. Never pays."""
     message = message.strip()[:MAX_MESSAGE_CHARS]
+    if client is None and use_cache:  # replay a recorded demo answer when it applies (never when a test injects a fake Gemini)
+        replay = cached_run(conn, message)
+        if replay is not None:
+            return replay
     today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     contents = [{"role": "user", "parts": [{"text": f"Today is {today}. The owner says: {message}"}]}]
     steps: list[dict] = []
@@ -118,3 +156,11 @@ def run_agent(conn, message: str, today: str | None = None, client=None, max_ste
         contents.append({"role": "user", "parts": responses})
     return {"reply": "I stopped because the request needed too many steps. Nothing was paid.",
             "steps": steps, "proposal": build_proposal(steps)}
+
+
+def record(conn, message: str, today: str) -> dict:
+    """Used by seed/export_agent_cache.py: run the live agent once (no cache) and return what to store."""
+    signature = state_signature(conn)
+    out = run_agent(conn, message, today=today, use_cache=False)
+    return {"prompt": _norm(message), "signature": signature,
+            "steps": [{"tool": s["tool"], "args": s["args"]} for s in out["steps"]], "reply": out["reply"]}

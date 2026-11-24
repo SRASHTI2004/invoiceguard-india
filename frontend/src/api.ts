@@ -201,7 +201,7 @@ export const api = {
   reject: (id: number) => post<Invoice>(`/api/invoices/${id}/reject`),
   refreshPayout: (id: number) => post<Invoice>(`/api/invoices/${id}/refresh-payout`),
   agent: (message: string) =>
-    call<{ reply: string; steps: AgentStep[]; proposal: Proposal }>("/api/agent", {
+    call<{ reply: string; steps: AgentStep[]; proposal: Proposal; cached?: boolean }>("/api/agent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message }),

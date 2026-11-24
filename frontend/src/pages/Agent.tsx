@@ -1,4 +1,4 @@
-import { Bot, Check, Send, Wrench, X } from "lucide-react";
+import { Bot, Check, Send, Wrench, X, Zap } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Markdown from "../Markdown";
 import { AgentStep, api, ConfirmResult, inr, Proposal, ProposalItem } from "../api";
@@ -8,7 +8,7 @@ const EXAMPLES = ["Pay all held invoices due this week", "What is waiting for ap
 
 type Msg =
   | { id: number; role: "user"; text: string }
-  | { id: number; role: "agent"; text: string; steps: AgentStep[]; proposal: Proposal | null; state: "open" | "dismissed" | "confirmed"; results?: ConfirmResult[] }
+  | { id: number; role: "agent"; text: string; steps: AgentStep[]; proposal: Proposal | null; cached?: boolean; state: "open" | "dismissed" | "confirmed"; results?: ConfirmResult[] }
   | { id: number; role: "error"; text: string };
 
 function Item({ item }: { item: ProposalItem }) {
@@ -51,7 +51,7 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
       const empty = !res.reply && !(res.proposal?.recommended.length || res.proposal?.not_recommended.length);
       setMsgs((m) => [...m, empty
         ? { id: nextId.current++, role: "error", text: "The agent returned no answer. Gemini may be unavailable or out of quota. Try again later or use Approvals." }
-        : { id: nextId.current++, role: "agent", text: res.reply, steps: res.steps, proposal: res.proposal, state: "open" }]);
+        : { id: nextId.current++, role: "agent", text: res.reply, steps: res.steps, proposal: res.proposal, cached: res.cached, state: "open" }]);
     } catch (e) {
       setMsgs((m) => [...m, { id: nextId.current++, role: "error", text: (e as Error).message }]);
     }
@@ -91,7 +91,7 @@ export default function AgentPage({ reload }: { reload: () => Promise<void> }) {
               <div key={m.id} className="msg"><ErrorState message={m.text} /></div>
             ) : (
               <div key={m.id} className="msg msg-agent">
-                <div className="who"><Bot size={14} aria-hidden="true" />AP Agent</div>
+                <div className="who"><Bot size={14} aria-hidden="true" />AP Agent{m.cached && <span className="instant" title="A recorded answer from a real Gemini run on the demo data. The checks and the proposal below were computed live just now."><Zap size={12} aria-hidden="true" />Instant demo answer</span>}</div>
                 {m.steps.length > 0 && (
                   <div className="tools" aria-label="Tools the agent used">
                     {m.steps.map((s, i) => (
