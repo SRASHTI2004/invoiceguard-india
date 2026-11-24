@@ -110,6 +110,41 @@ export interface SampleInvoice {
   url: string;
 }
 
+export interface EvalCheck {
+  name: string;
+  severity: "BLOCK" | "HOLD";
+  message: string;
+}
+
+export interface EvalCase {
+  n: number;
+  file: string;
+  supplier: string;
+  invoice_number: string;
+  category: string;
+  is_fraud: boolean;
+  expected: string;
+  decision: string;
+  status: string;
+  correct: boolean;
+  amount_paise: number;
+  primary_check: string | null;
+  checks: EvalCheck[];
+  reason: string;
+}
+
+export interface EvaluationReport {
+  available: boolean;
+  generated_at?: string;
+  generator?: string;
+  method?: string;
+  summary?: {
+    cases: number; fraud_total: number; fraud_caught: number; valid_total: number; valid_wrongly_held: number;
+    fraud_amount_paise: number; fraud_stopped_paise: number; valid_paid_paise: number;
+  };
+  cases: EvalCase[];
+}
+
 export interface AppConfig {
   buyer_name: string;
   buyer_gstin: string;
@@ -187,6 +222,7 @@ export const api = {
   suppliers: () => call<Supplier[]>("/api/suppliers"),
   summary: () => call<Summary>("/api/summary"),
   config: () => call<AppConfig>("/api/config"),
+  evaluation: () => call<EvaluationReport>("/api/evaluation"),
   samples: () => call<SampleInvoice[]>("/api/samples"),
   timeline: (id: number) => call<{ invoice_id: number; steps: TimelineStep[] }>(`/api/invoices/${id}/timeline`),
   audit: () => call<AuditRow[]>("/api/audit"),

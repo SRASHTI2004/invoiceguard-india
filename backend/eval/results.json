@@ -1,0 +1,256 @@
+{
+ "generated_at": "2026-11-24 10:39:07",
+ "generator": "python -m eval.run_eval --write",
+ "method": "Every labelled sample invoice is run through the full pipeline in a fresh database. Gemini results are the cached real model output in seed/gemini_cache.json. Payouts are the simulated sandbox.",
+ "summary": {
+  "cases": 12,
+  "fraud_total": 7,
+  "fraud_caught": 7,
+  "valid_total": 5,
+  "valid_wrongly_held": 0,
+  "fraud_amount_paise": 151449800,
+  "fraud_stopped_paise": 151449800,
+  "valid_paid_paise": 71607700
+ },
+ "cases": [
+  {
+   "n": 1,
+   "file": "inv01_mahalaxmi.pdf",
+   "supplier": "Mahalaxmi Office Supplies",
+   "invoice_number": "MOS/26-27/1041",
+   "category": "valid_igst",
+   "is_fraud": false,
+   "expected": "AUTO_PAY",
+   "decision": "AUTO_PAY",
+   "status": "PAID",
+   "correct": true,
+   "amount_paise": 17717800,
+   "primary_check": null,
+   "checks": [],
+   "reason": "All checks passed and AI review found no risk signals"
+  },
+  {
+   "n": 2,
+   "file": "inv02_brightline.pdf",
+   "supplier": "Brightline Packaging Pvt Ltd",
+   "invoice_number": "BP/26-27/8821",
+   "category": "valid_cgst_sgst",
+   "is_fraud": false,
+   "expected": "AUTO_PAY",
+   "decision": "AUTO_PAY",
+   "status": "PAID",
+   "correct": true,
+   "amount_paise": 4727900,
+   "primary_check": null,
+   "checks": [],
+   "reason": "All checks passed and AI review found no risk signals"
+  },
+  {
+   "n": 3,
+   "file": "inv03_konkan.pdf",
+   "supplier": "Konkan Freight Logistics",
+   "invoice_number": "KFL/2610/5521",
+   "category": "valid_igst",
+   "is_fraud": false,
+   "expected": "AUTO_PAY",
+   "decision": "AUTO_PAY",
+   "status": "PAID",
+   "correct": true,
+   "amount_paise": 15945000,
+   "primary_check": null,
+   "checks": [],
+   "reason": "All checks passed and AI review found no risk signals"
+  },
+  {
+   "n": 4,
+   "file": "inv04_summit.pdf",
+   "supplier": "Summit IT Services Pvt Ltd",
+   "invoice_number": "SIT/0342",
+   "category": "valid_igst",
+   "is_fraud": false,
+   "expected": "AUTO_PAY",
+   "decision": "AUTO_PAY",
+   "status": "PAID",
+   "correct": true,
+   "amount_paise": 28320000,
+   "primary_check": null,
+   "checks": [],
+   "reason": "All checks passed and AI review found no risk signals"
+  },
+  {
+   "n": 5,
+   "file": "inv05_greenleaf.pdf",
+   "supplier": "GreenLeaf Facility Services",
+   "invoice_number": "GL/7710",
+   "category": "valid_cgst_sgst",
+   "is_fraud": false,
+   "expected": "AUTO_PAY",
+   "decision": "AUTO_PAY",
+   "status": "PAID",
+   "correct": true,
+   "amount_paise": 4897000,
+   "primary_check": null,
+   "checks": [],
+   "reason": "All checks passed and AI review found no risk signals"
+  },
+  {
+   "n": 6,
+   "file": "inv06_mahalaxmi_duplicate.pdf",
+   "supplier": "Mahalaxmi Office Supplies",
+   "invoice_number": "MOS/26-27/1041",
+   "category": "duplicate",
+   "is_fraud": true,
+   "expected": "BLOCK",
+   "decision": "BLOCK",
+   "status": "BLOCKED",
+   "correct": true,
+   "amount_paise": 17717800,
+   "primary_check": "Duplicate invoice check",
+   "checks": [
+    {
+     "name": "Duplicate invoice check",
+     "severity": "BLOCK",
+     "message": "Duplicate: invoice MOS/26-27/1041 from this supplier was already received (#1)"
+    }
+   ],
+   "reason": "Duplicate: invoice MOS/26-27/1041 from this supplier was already received (#1)"
+  },
+  {
+   "n": 7,
+   "file": "inv07_atlas_fake_gstin.pdf",
+   "supplier": "Atlas Industrial Parts",
+   "invoice_number": "AIP/30918",
+   "category": "fake_gstin",
+   "is_fraud": true,
+   "expected": "BLOCK",
+   "decision": "BLOCK",
+   "status": "BLOCKED",
+   "correct": true,
+   "amount_paise": 30738000,
+   "primary_check": "GSTIN check character",
+   "checks": [
+    {
+     "name": "GSTIN check character",
+     "severity": "BLOCK",
+     "message": "Not a real GSTIN: 24AAACA6012N1ZA fails the GSTIN check character: the number is not real"
+    }
+   ],
+   "reason": "Not a real GSTIN: 24AAACA6012N1ZA fails the GSTIN check character: the number is not real"
+  },
+  {
+   "n": 8,
+   "file": "inv08_pinnacle_wrong_tax_type.pdf",
+   "supplier": "Pinnacle Print & Design",
+   "invoice_number": "PP/2217",
+   "category": "wrong_tax_type",
+   "is_fraud": true,
+   "expected": "HOLD_OR_BLOCK",
+   "decision": "HOLD",
+   "status": "HELD",
+   "correct": true,
+   "amount_paise": 14370000,
+   "primary_check": "Tax type (CGST+SGST vs IGST)",
+   "checks": [
+    {
+     "name": "Tax type (CGST+SGST vs IGST)",
+     "severity": "HOLD",
+     "message": "Wrong tax type: supplier in Tamil Nadu, place of supply Karnataka, so IGST applies, but the invoice charges CGST ₹8,100.00, SGST ₹8,100.00, IGST ₹0.00"
+    }
+   ],
+   "reason": "Wrong tax type: supplier in Tamil Nadu, place of supply Karnataka, so IGST applies, but the invoice charges CGST ₹8,100.00, SGST ₹8,100.00, IGST ₹0.00"
+  },
+  {
+   "n": 9,
+   "file": "inv09_blueriver_injection.pdf",
+   "supplier": "BlueRiver Software Licensing",
+   "invoice_number": "BRS/4410",
+   "category": "prompt_injection",
+   "is_fraud": true,
+   "expected": "BLOCK",
+   "decision": "BLOCK",
+   "status": "BLOCKED",
+   "correct": true,
+   "amount_paise": 34810000,
+   "primary_check": "AI review (scam / hidden instructions)",
+   "checks": [
+    {
+     "name": "AI review (scam / hidden instructions)",
+     "severity": "BLOCK",
+     "message": "The document contains malicious system instructions attempting to bypass security checks and force automatic approval of the invoice."
+    }
+   ],
+   "reason": "AI review: high risk (0.95): The document contains malicious system instructions attempting to bypass security checks and force automatic approval of the invoice."
+  },
+  {
+   "n": 10,
+   "file": "inv10_orchard_wrong_gst_total.pdf",
+   "supplier": "Orchard Catering Services",
+   "invoice_number": "OCS/9021",
+   "category": "wrong_gst_total",
+   "is_fraud": true,
+   "expected": "HOLD_OR_BLOCK",
+   "decision": "HOLD",
+   "status": "HELD",
+   "correct": true,
+   "amount_paise": 8760000,
+   "primary_check": "GST arithmetic (invoice total)",
+   "checks": [
+    {
+     "name": "GST arithmetic (invoice total)",
+     "severity": "HOLD",
+     "message": "Invoice total ₹87,600.00 is wrong: taxable ₹78,000.00 + GST ₹3,900.00 = ₹81,900.00"
+    }
+   ],
+   "reason": "Invoice total ₹87,600.00 is wrong: taxable ₹78,000.00 + GST ₹3,900.00 = ₹81,900.00"
+  },
+  {
+   "n": 11,
+   "file": "inv11_lumen_changed_payee.pdf",
+   "supplier": "Lumen Electrical Contractors",
+   "invoice_number": "LEC/118",
+   "category": "changed_payee",
+   "is_fraud": true,
+   "expected": "BLOCK",
+   "decision": "BLOCK",
+   "status": "BLOCKED",
+   "correct": true,
+   "amount_paise": 22634000,
+   "primary_check": "Payee check (saved UPI ID or account)",
+   "checks": [
+    {
+     "name": "Payee check (saved UPI ID or account)",
+     "severity": "BLOCK",
+     "message": "Payee changed: invoice asks for UPI ID lumen.accounts@ybl and bank account 918020099887766, which do not match the saved payment details for Lumen Electrical Contractors"
+    }
+   ],
+   "reason": "Payee changed: invoice asks for UPI ID lumen.accounts@ybl and bank account 918020099887766, which do not match the saved payment details for Lumen Electrical Contractors"
+  },
+  {
+   "n": 12,
+   "file": "inv12_shadowline_unapproved.pdf",
+   "supplier": "Shadowline Trading",
+   "invoice_number": "ST/001",
+   "category": "unapproved_supplier",
+   "is_fraud": true,
+   "expected": "BLOCK",
+   "decision": "BLOCK",
+   "status": "BLOCKED",
+   "correct": true,
+   "amount_paise": 22420000,
+   "primary_check": "Approved supplier list",
+   "checks": [
+    {
+     "name": "Approved supplier list",
+     "severity": "BLOCK",
+     "message": "Supplier 'Shadowline Trading' is not on the approved list"
+    },
+    {
+     "name": "Purchase order check",
+     "severity": "BLOCK",
+     "message": "Purchase order PO-2999 does not exist"
+    }
+   ],
+   "reason": "Supplier 'Shadowline Trading' is not on the approved list; Purchase order PO-2999 does not exist"
+  }
+ ]
+}

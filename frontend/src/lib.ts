@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 /* ---- hash router: #/invoices, #/invoices/7 (drawer open), #/approvals ... ---------------------------------------- */
-export type Page = "dashboard" | "invoices" | "approvals" | "agent" | "suppliers" | "audit";
-export const PAGES: Page[] = ["dashboard", "invoices", "approvals", "agent", "suppliers", "audit"];
+export type Page = "dashboard" | "invoices" | "approvals" | "agent" | "suppliers" | "audit" | "evaluation";
+export const PAGES: Page[] = ["dashboard", "invoices", "approvals", "agent", "suppliers", "audit", "evaluation"];
 
 export interface Route {
   page: Page;

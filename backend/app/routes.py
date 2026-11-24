@@ -159,6 +159,15 @@ def download_sample(filename: str):
     return FileResponse(UPLOAD_SAMPLES_DIR / filename, media_type="application/pdf", filename=filename)
 
 
+@router.get("/evaluation")
+def evaluation():
+    """Results of the evaluation on the labelled invoice set, as written by `python -m eval.run_eval --write`."""
+    f = Path(__file__).resolve().parents[1] / "eval" / "results.json"
+    if not f.exists():
+        return {"available": False}
+    return {"available": True, **json.loads(f.read_text(encoding="utf-8"))}
+
+
 @router.post("/demo/run-samples")
 def run_samples(conn=Depends(get_conn)):
     """Demo helper: RESET all invoices, payouts and the audit log, then push the sample PDFs through the firewall in order.

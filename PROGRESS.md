@@ -26,3 +26,6 @@ Prasunex Innovathon Round 3. Built from the original InvoiceGuard repo. Each ste
 - [x] 7. README rewritten (features, screenshots, GST + ITC + MSME + instant-agent explanations) and DEMO_SCRIPT.md (3 minutes: GST checks, blocked fraud, corrected-invoice request, approve with reason, MSME timer, AP agent, try it yourself). 23 fresh screenshots in docs/screenshots (desktop 1440px, phone 390px).
 - [x] 8a. Live-site browser run (https://invoiceguard-india.onrender.com, desktop 1440px + phone 390px): 90/90 checks pass (see FINAL_REPORT.md). One UX defect found on phones (stacked toasts covering the drawer), fixed by capping visible toasts at 2, 5s, 3-line clamp.
 - [x] 8. Final live check on the deployed build: 94/94 checks pass at 1440px and 390px (every page, demo load 1.5 s, agent chips ~0.4 s, sample uploads, approve with reason, reject, agent confirm, dark/light, no console errors). FINAL_REPORT.md written; live data reset to the clean 13-invoice demo.
+
+## Last improvements (then code freeze)
+- [x] 1. "How well it works" page: `eval/results.json` is written by the real eval run (`python -m eval.run_eval --write`) with the check that caught each case; `/api/evaluation` serves it; a test fails if the file is stale; linked from the dashboard and the sidebar. 3 tests.

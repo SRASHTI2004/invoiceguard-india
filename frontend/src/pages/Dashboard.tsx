@@ -1,4 +1,5 @@
-import { CheckCircle2, ClipboardCheck, PauseCircle, PiggyBank, ReceiptIndianRupee, ShieldX, type LucideIcon } from "lucide-react";
+import { CheckCircle2, ClipboardCheck, FlaskConical, PauseCircle, PiggyBank, ReceiptIndianRupee, ShieldX, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useApprovalActions } from "../actions";
 import { inr, inrShort, Invoice, Summary } from "../api";
 import { hrefFor, useMedia } from "../lib";
@@ -141,6 +142,11 @@ export default function Dashboard({ invoices, summary, loaded, reload, open }: {
           )}
         </section>
       </div>
+      <a className="card eval-link" href={hrefFor("evaluation")}>
+        <span className="kpi-icon tone-green"><FlaskConical size={18} aria-hidden="true" /></span>
+        <span><strong>How well does it work?</strong><span className="muted"> See the evaluation on the labelled invoices: what was caught, what was wrongly held, and which check caught each one.</span></span>
+        <ChevronRight size={18} aria-hidden="true" />
+      </a>
       {dialog}
     </>
   );

@@ -1,4 +1,4 @@
-import { Bot, Building2, ClipboardCheck, Database, FileText, LayoutDashboard, Moon, ScrollText, Sun, type LucideIcon } from "lucide-react";
+import { Bot, Building2, ClipboardCheck, Database, FileText, FlaskConical, LayoutDashboard, Moon, ScrollText, Sun, type LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
 import { AppConfig } from "./api";
 import { hrefFor, Page, Theme } from "./lib";
@@ -11,6 +11,7 @@ const NAV: { page: Page; label: string; Icon: LucideIcon }[] = [
   { page: "agent", label: "AP Agent", Icon: Bot },
   { page: "suppliers", label: "Suppliers", Icon: Building2 },
   { page: "audit", label: "Audit log", Icon: ScrollText },
+  { page: "evaluation", label: "How well it works", Icon: FlaskConical },
 ];
 
 export function Logo({ size = 40 }: { size?: number }) {
@@ -74,7 +75,7 @@ export default function Shell({ page, cfg, heldCount, theme, toggleTheme, onLoad
         <main id="main" className="content" tabIndex={-1}>{children}</main>
       </div>
       <nav className="tabbar" aria-label="Main">
-        {NAV.map(({ page: p, label, Icon }) => (
+        {NAV.filter((n) => n.page !== "evaluation").map(({ page: p, label, Icon }) => (
           <a key={p} href={hrefFor(p)} aria-current={page === p ? "page" : undefined}>
             <Icon size={20} aria-hidden="true" />
             {label.replace("AP ", "").replace(" log", "")}

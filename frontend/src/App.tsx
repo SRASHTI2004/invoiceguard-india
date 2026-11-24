@@ -6,6 +6,7 @@ import AgentPage from "./pages/Agent";
 import ApprovalsPage from "./pages/Approvals";
 import AuditPage from "./pages/Audit";
 import Dashboard from "./pages/Dashboard";
+import EvaluationPage from "./pages/Evaluation";
 import InvoicesPage from "./pages/Invoices";
 import Landing from "./pages/Landing";
 import SuppliersPage from "./pages/Suppliers";
@@ -81,6 +82,7 @@ function Root() {
       {route.page === "agent" && <AgentPage reload={reload} />}
       {route.page === "suppliers" && <SuppliersPage />}
       {route.page === "audit" && <AuditPage invoices={invoices} />}
+      {route.page === "evaluation" && <EvaluationPage />}
       {route.page === "invoices" && route.invoiceId && drawerInvoice && <InvoiceDrawer key={drawerInvoice.id} invoice={drawerInvoice} onClose={close} reload={reload} />}
       {confirmReload && (
         <ConfirmDialog title="Reload the demo data?" confirmLabel="Reload demo data" onConfirm={runDemo} onCancel={() => setConfirmReload(false)}
