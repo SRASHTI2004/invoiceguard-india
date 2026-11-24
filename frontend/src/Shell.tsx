@@ -1,7 +1,7 @@
 import { Bot, Building2, ChevronsUpDown, ClipboardCheck, Database, FileText, FlaskConical, LayoutDashboard, Moon, ScrollText, Sun, type LucideIcon } from "lucide-react";
 import { ReactNode } from "react";
 import { AppConfig, Business } from "./api";
-import { hrefFor, Page, Theme } from "./lib";
+import { hrefFor, Page, Theme, useMedia } from "./lib";
 import { Spinner } from "./ui";
 
 const NAV: { page: Page; label: string; Icon: LucideIcon }[] = [
@@ -35,13 +35,14 @@ export function ThemeToggle({ theme, toggle }: { theme: Theme; toggle: () => voi
 
 /** CA-firm switcher: one login, several client businesses. With a single business it is just the name. */
 function BusinessSwitcher({ businesses, current, name, onChange }: { businesses: Business[]; current: number; name: string; onChange: (id: number) => void }) {
+  const narrow = useMedia("(max-width: 719px)"); // phones: the short name fits the top bar
   if (businesses.length < 2) return <div className="biz-name">{name}</div>;
   return (
     <label className="biz-pick">
       <span className="sr-only">Client business</span>
       <Building2 size={16} aria-hidden="true" className="biz-ico" />
       <select value={current} onChange={(e) => onChange(Number(e.target.value))} aria-label="Switch client business">
-        {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}{b.held_count ? ` (${b.held_count} on hold)` : ""}</option>)}
+        {businesses.map((b) => <option key={b.id} value={b.id}>{narrow ? b.short_name : b.name}</option>)}
       </select>
       <ChevronsUpDown size={14} aria-hidden="true" className="biz-chev" />
     </label>

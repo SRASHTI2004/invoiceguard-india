@@ -13,7 +13,7 @@ function ItcCard({ s }: { s: Summary | null }) {
     <div className="card kpi kpi-itc tone-green">
       <div className="kpi-top"><span>ITC protected</span><span className="kpi-icon"><ReceiptIndianRupee size={18} aria-hidden="true" /></span></div>
       <div className="kpi-value">{inr(s?.itc_protected_paise ?? 0)}</div>
-      <div className="kpi-sub">GST on {n} blocked {n === 1 ? "invoice" : "invoices"} with an invalid GSTIN or GST error. Paying these would put your input tax credit at risk.</div>
+      <div className="kpi-sub">{n === 0 ? "No blocked invoices with an invalid GSTIN or GST error yet." : `GST on ${n} blocked ${n === 1 ? "invoice" : "invoices"} with an invalid GSTIN or GST error.`} Paying these would put your input tax credit at risk.</div>
       {risk > 0 && <div className="kpi-note">{inr(risk)} more is at risk on {s?.itc_at_risk_count} held {s?.itc_at_risk_count === 1 ? "invoice" : "invoices"} until you decide.</div>}
     </div>
   );
