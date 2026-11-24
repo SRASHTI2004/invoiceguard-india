@@ -161,7 +161,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [ta
 
 const overlayStack: HTMLElement[] = []; // only the topmost overlay reacts to Escape / Tab
 
-export function Overlay({ label, onClose, variant, children }: { label: string; onClose: () => void; variant: "drawer" | "center"; children: ReactNode }) {
+export function Overlay({ label, onClose, variant, wide, children }: { label: string; onClose: () => void; variant: "drawer" | "center"; wide?: boolean; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -191,7 +191,7 @@ export function Overlay({ label, onClose, variant, children }: { label: string; 
   return (
     <div className={`overlay overlay-${variant}`}>
       <div className="scrim" onClick={onClose} aria-hidden="true" />
-      <div ref={ref} className="sheet" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
+      <div ref={ref} className={wide ? "sheet wide" : "sheet"} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}>
         {children}
       </div>
     </div>

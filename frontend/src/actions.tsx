@@ -53,7 +53,7 @@ export function useApprovalActions(reload: () => Promise<void>): {
     const failed = failedGst(pending.inv);
     const ok = reason.trim().length >= MIN_REASON;
     dialog = (
-      <Overlay label="Approve despite a GST problem" onClose={close} variant="center">
+      <Overlay label="Approve despite a GST problem" onClose={close} variant="center" wide>
         <h2 className="dialog-title">Approve despite a GST problem?</h2>
         <div className="dialog-body">
           <p>This invoice failed {failed.length === 1 ? "a GST check" : `${failed.length} GST checks`}:</p>
@@ -106,7 +106,7 @@ export function useCorrectionAction(reload: () => Promise<void>): {
     }
   };
   const dialog = draft && (
-    <Overlay label="Draft email to the supplier" onClose={() => setDraft(null)} variant="center">
+    <Overlay label="Draft email to the supplier" onClose={() => setDraft(null)} variant="center" wide>
       <h2 className="dialog-title">Draft: ask for a corrected invoice</h2>
       <div className="dialog-body">
         <dl className="kv draft-meta">

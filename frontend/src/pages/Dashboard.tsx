@@ -40,7 +40,7 @@ function ProtectedChart({ invoices }: { invoices: Invoice[] }) {
   const pts = days.map((d) => ({ d, v: (run += byDate.get(d)!) }));
   if (pts.length === 0) return <EmptyState icon={PiggyBank} title="Nothing protected yet" text="Blocked and rejected invoices will show up here as money kept in your account." />;
 
-  const W = narrow ? 320 : 560, H = narrow ? 210 : 250, L = 52, R = 16, T = 12, B = 32;
+  const W = narrow ? 320 : 560, H = narrow ? 210 : 330, L = 52, R = 16, T = 12, B = 32;
   const max = pts[pts.length - 1].v;
   const step = niceStep(max / 4) * 100; // paise
   const top = Math.ceil(max / step) * step;
